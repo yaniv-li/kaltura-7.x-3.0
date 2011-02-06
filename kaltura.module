@@ -43,14 +43,19 @@ function kaltura_init() {
 }
 
 /*
- * Implementation of hook_perm().
+ * Implementation of hook_permission().
  */
-function kaltura_perm() {
+function kaltura_permission() {
   return array(
-    'administer kaltura',
-    'access kaltura widgets',
-    'view Kaltura embed code',
-    'clone kaltura mixes',
+    'administer kaltura' array (
+      'title' => t('Administer kaltura'),
+    ),
+    'access kaltura widgets' => array (
+      'title' => t('Access kaltura widgets')
+    ),
+    'view Kaltura embed code' => array (
+      'title' => t('View Kaltura embed code')
+    )
   );
 }
 
@@ -258,31 +263,16 @@ function kaltura_build_search() {
   return $q;
 }
 
-/**
- * Implementation of hook_nodeapi().
- *
- * All we do here is to alter the body and teaser fields when a node goes to view mode
- * we call our functions to replcae the special "tags", which we create in theme_node_kaltura_*_entryId(), with the embed tag
- *
- */
-function kaltura_nodeapi(&$node, $op, $teaser) {
-  $node_update_access = node_access('update', $node);
-  $show_embed = user_access('view Kaltura embed code');
-  switch ($op) {
-    case "load":
-      break;
-    case "view":
-      break;
-    case 'search result':
-      $node->body = kaltura_replace_tags($node->body, FALSE, TRUE);
-      break;
-    case "alter":
-      $node->body = kaltura_replace_tags($node->body, FALSE, FALSE, $node_update_access, $show_embed, $node->type);
-      $node->teaser = kaltura_replace_tags($node->teaser);
-      break;
-    default:
+  function kaltura_node_search_result ($node) {
+    $node->body = kaltura_replace_tags($node->body, FALSE, TRUE);
   }
-}
+
+  function kaltura_node_presave($node) {
+    $node_update_access = node_access('update', $node);
+    $show_embed = user_access('view Kaltura embed code');
+    $node->body = kaltura_replace_tags($node->body, FALSE, FALSE, $node_update_access, $show_embed, $node->type);
+    $node->teaser = kaltura_replace_tags($node->teaser);
+  }
 
 /*
  * This function determines in which playedr widget we need to use
@@ -374,7 +364,7 @@ function kaltura_list_entries() {
     $title .= ' (filter by - '. $media_types->media_types_map[$_GET['filter']] .')' ;
   }
   drupal_set_title($title);
-  $node_count = db_fetch_object(db_query(db_rewrite_sql('SELECT COUNT(node.nid) c FROM {node} node LEFT JOIN {node_kaltura} knode on node.nid = knode.nid WHERE type like \'kaltura%\' AND status > 0 '. $filter_media, 'node', 'nid')));
+ // $node_count = db_fetch_object(db_query(db_rewrite_sql('SELECT COUNT(node.nid) c FROM {node} node LEFT JOIN {node_kaltura} knode on node.nid = knode.nid WHERE type like \'kaltura%\' AND status > 0 '. $filter_media, 'node', 'nid')));
   $pager_total[0] = ceil($node_count->c/20);
   if ($_GET['page']) {
     $start = 20 * (int)$_GET['page'];
@@ -385,7 +375,7 @@ function kaltura_list_entries() {
   }
   $get_all = 'SELECT node.nid,node.title,node.type,knode.kaltura_entryId,knode.kaltura_thumbnail_url FROM {node} node '.
     'LEFT JOIN {node_kaltura} knode on node.nid = knode.nid WHERE (node.type = \'kaltura_entry\' OR node.type = \'kaltura_mix\') '. $filter_media .' AND status > 0 ORDER BY nid DESC LIMIT '. $start .', 20';
-  $result = db_query(db_rewrite_sql($get_all, 'node', 'nid'));
+  //$result = db_query(db_rewrite_sql($get_all, 'node', 'nid'));
   while ($node_nid = db_fetch_object($result)) {
     $nodes[$node_nid->nid] = $node_nid;
 
@@ -709,7 +699,7 @@ function kaltura_choose_player($as_single_form, $type, $node_type, $return_widge
     '#title' => t('Video Player for Node'),
     '#options' => $players_name,
     '#default_value' => $saved_player,
-    '#ahah' => array(
+    '#ajax' => array(
       'event' => 'change',
       'path' => 'kaltura/ahah/sample_widget/'. $type,
       'wrapper' => 'kaltura_sample_widget_wrapper_'. $type,
@@ -784,29 +774,43 @@ function kaltura_cw_destination() {
 include_once('includes/kaltura.themeing.inc');
 
 /*
- * Implementation of hook_block().
+ * Implementation of hook_block_info().
  */
-function kaltura_block($op = 'list', $delta = 0, $edit = array()) {
-  if ($op == 'list') {
-    $blocks[0] = array('info' => t('Upload media block'),
-      'weight' => 0, 'status' => 0);
-    $blocks[1] = array('info' => t('Upload audio block'),
-      'weight' => 0, 'status' => 0, 'delta' => 1);
-    $blocks[2] = array('info' => t('Upload image block'),
-      'weight' => 0, 'status' => 0, 'delta' => 2);
-    $blocks[3] = array('info' => t('Upload video block'),
-      'weight' => 0, 'status' => 0, 'delta' => 3);
-    $blocks[4] = array('info' => t('Simple uploader block'),
-      'weight' => 0, 'status' => 0, 'delta' => 4);
+function kaltura_block_info() {
+  $blocks['upload_media'] = array(
+    'info' => t('Upload media block'),
+    'weight' => 0,
+    'status' => TRUE
+  );
+  $blocks['upload_audio'] = array(
+    'info' => t('Upload audio block'),
+    'weight' => 0,
+    'status' => 0
+  );
+  $blocks['upload_image'] = array(
+    'info' => t('Upload image block'),
+    'weight' => 0,
+    'status' => 0
+  );
+  $blocks['upload_video'] = array(
+    'info' => t('Upload video block'),
+    'weight' => 0,
+    'status' => 0
+  );
+  $blocks['simple_uploader'] = array(
+    'info' => t('Simple uploader block'),
+    'weight' => 0,
+    'status' => 0
+  );
     return $blocks;
-  }
-  elseif ($op == 'configure' && $delta == 0) {
-  }
-  elseif ($op == 'save' && $delta == 0) {
-  }
-  elseif ($op == 'view') {
+}
+
+/*
+ * Implementation of hook_block_view().
+ */
+function kaltura_block_view($delta = '') {
     switch ($delta) {
-      case 0:
+      case 'upload_media':
         if (user_access('create kaltura items')) {
           $block = array(
             'subject' => t('Upload Media'),
@@ -814,7 +818,7 @@ function kaltura_block($op = 'list', $delta = 0, $edit = array()) {
           );
         }
         break;
-      case 1:
+      case 'upload_audio':
         if (user_access('create kaltura items')) {
           $block = array(
             'subject' => t('Upload Audio'),
@@ -822,7 +826,7 @@ function kaltura_block($op = 'list', $delta = 0, $edit = array()) {
            );
         }
         break;
-      case 2:
+      case 'upload_image':
         if (user_access('create kaltura items')) {
           $block = array(
             'subject' => t('Upload Image'),
@@ -830,7 +834,7 @@ function kaltura_block($op = 'list', $delta = 0, $edit = array()) {
           );
         }
         break;
-      case 3:
+      case 'upload_video':
         if (user_access('create kaltura items')) {
           $block = array(
             'subject' => t('Upload Video'),
@@ -838,7 +842,7 @@ function kaltura_block($op = 'list', $delta = 0, $edit = array()) {
           );
         }
         break;
-      case 4:
+      case 'simple_uploader':
         if (user_access('create kaltura items')) {
           $block = array(
             'subject' => t('Simple Uploader'),
@@ -848,7 +852,6 @@ function kaltura_block($op = 'list', $delta = 0, $edit = array()) {
         break;
     }
     return $block;
-  }
 }
 
 /**
