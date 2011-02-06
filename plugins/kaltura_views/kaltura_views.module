@@ -1,0 +1,20 @@
+<?php
+// $Id: kaltura_views.module,v 1.2.2.5.2.1 2010/08/09 04:30:22 univate Exp $
+
+/*
+ * @file
+ * integrates kaltura module with views
+ *
+ */
+
+/*
+ * Implementation of hook_views_api().
+ */
+function kaltura_views_views_api() {
+  return array(
+    'api' => 2.0,
+    'path' => drupal_get_path('module', 'kaltura_views'),
+  );
+}
+
+

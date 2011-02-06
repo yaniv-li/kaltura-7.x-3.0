@@ -1,0 +1,14 @@
+; $Id: field_kaltura.info,v 1.1.2.5 2010/07/07 09:34:53 kaltura Exp $: field_kaltura
+name = kaltura as CCK field
+package = Kaltura Media Management
+dependencies[] = kaltura
+dependencies[] = node_kaltura_entry
+dependencies[] = content
+core = 6.x
+description = provides 2 new CCK fields based on the kaltura nodes
+; Information added by drupal.org packaging script on January 1, 1970 - 00:00
+version = "6.x-2.x-dev"
+core = "6.x"
+project = "kaltura"
+datestamp = "1296131091"
+

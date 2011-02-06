@@ -1,0 +1,40 @@
+<?php
+// $Id: field_kaltura.install,v 1.2.2.5 2010/07/07 09:34:53 kaltura Exp $
+
+/*
+ * @file
+ * Installation process for kaltura CCK field module
+ *
+ */
+
+/**
+ * Implementation of hook_install().
+ */
+function field_kaltura_install() {
+  drupal_load('module', 'content');
+  content_notify('install', 'field_kaltura');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function field_kaltura_uninstall() {
+  drupal_load('module', 'content');
+  content_notify('uninstall', 'field_kaltura');
+}
+
+/**
+ * Implementation of hook_enable().
+ */
+function field_kaltura_enable() {
+  drupal_load('module', 'content');
+  content_notify('enable', 'field_kaltura');
+}
+
+/**
+ * Implementation of hook_disable().
+ */
+function field_kaltura_disable() {
+  drupal_load('module', 'content');
+  content_notify('disable', 'field_kaltura');
+}

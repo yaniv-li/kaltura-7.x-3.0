@@ -1,0 +1,115 @@
+<?php
+// $Id: kaltura_playlist.install,v 1.1.2.6 2010/07/07 09:34:53 kaltura Exp $
+
+/*
+ * @file
+ * Installation process for kaltura playlist module
+ *
+ */
+
+
+/**
+ * Implementation of hook_schema().
+ *
+ * Defines the tables and fields in each table that we add to the database
+ * to store kaltura data (nodes/notifications...)
+ */
+function kaltura_playlist_schema() {
+  $schema['node_kaltura_playlist'] = array(
+    'description' => t('The base table for Kaltura playlist nodes.'),
+    'fields' => array(
+      'vid' => array(
+        'description' => t('The current {node_revisions}.vid version identifier.'),
+        'type' => 'int',
+        'size' => 'small',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'nid' => array(
+        'description' => t('The primary identifier for a node.'),
+        'type' => 'int',
+        'size' => 'small',
+        'unsigned' => TRUE,
+        'not null' => TRUE
+      ),
+      'playlist_view' => array(
+        'description' => t('none'),
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => "",
+        'not null' => TRUE
+      ),
+      'tag_filter_operator' => array(
+        'description' => t('none'),
+        'type' => 'varchar',
+        'length' => 50,
+        'default' => "",
+        'not null' => TRUE
+      ),
+        'tag_filter' => array(
+        'description' => t('none'),
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => "",
+        'not null' => TRUE
+      ),
+    ),
+    'primary key' => array('vid'),
+  );
+  return $schema;
+}
+
+function kaltura_playlist_update_2() {
+  $ret = array();
+
+	db_add_field($ret, 'node_kaltura_playlist', 'tag_filter_operator', array('type' => 'varchar', 'length' => '50', 'default' => '', 'not null' => TRUE));
+	db_add_field($ret, 'node_kaltura_playlist', 'tag_filter', array('type' => 'varchar', 'length' => '255', 'default' => '', 'not null' => TRUE));
+	
+	return $ret;
+}
+
+/**
+ * Implementation of hook_install().
+ */
+function kaltura_playlist_install() {
+  drupal_install_schema('kaltura_playlist');
+  if (module_exists('views')) kaltura_populate_nodes();
+}
+
+function kaltura_populate_nodes() {
+  if (!module_exists('views')) return;
+  
+  include_once('kaltura_playlist.module');
+  // get views with _get_relevant_views()
+  $views = kaltura_get_relevant_views();
+  $count = 0;
+  // for each relevant view, build a node object (view title = node title)
+  foreach ($views as $key => $view) {
+    $node = new stdClass;
+    $node->title = str_replace('_', ' ', $view);
+    $node->type = 'kaltura_playlist';
+    $node->playlist_view = $key;
+    $node->tag_filter_operator = '';
+    $node->tag_filter = '';
+    $node->promote = 0;
+    $node->sticky = 0;
+    $node->status = 1;
+    $node->uid = 1;
+    $node->created = time();
+    $node->changed = time();
+    // save node
+    node_save($node);
+    kaltura_playlist_insert($node);
+    $count++;
+  }
+  // notify user about X nodes created.
+  drupal_set_message('Kaltura Playlist module has created '. $count .' playlist nodes based on your existing views.');
+}
+/**
+ * Implementation of hook_uninstall().
+ */
+function kaltura_playlist_uninstall() {
+  // Remove tables.
+  drupal_uninstall_schema('kaltura_playlist');
+}

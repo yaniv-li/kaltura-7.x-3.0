@@ -1,0 +1,774 @@
+<?php
+// $Id: node_kaltura_entry.module,v 1.2.2.6.2.5 2011/01/18 10:48:22 xuriz Exp $
+
+/*
+ * @file
+ * provides kaltura entry as node type 
+ *
+ */
+
+/*
+ * Implementation of hook_perm().
+ */
+function node_kaltura_entry_perm() {
+  return array(
+    'create kaltura items',
+    'edit kaltura items',
+    'view kaltura items',
+    //'edit own ???'
+    'edit own kaltura items'
+  );
+}
+
+/*
+ * Implementation of hook_access().
+ */
+function node_kaltura_entry_access($op, $node, $account) {
+  switch ($op) {
+    case 'create':
+      return user_access('create kaltura items', $account);
+    case 'update':
+      //     return user_access('edit kaltura items', $account);
+      return user_access('edit kaltura items', $account) || (user_access('edit own kaltura items') && $node->uid == $account->uid); 
+    case 'delete':
+      return user_access('delete kaltura items', $account);
+  }
+}
+
+
+/**
+ * Implementation of hook_menu().
+ */
+function node_kaltura_entry_menu() {
+  $items = array();
+  $items['admin/settings/kaltura/kaltura_entry_settings'] = array(
+    'title' => 'Media Node Settings',
+    'description' => 'Administer the kaltura entry module.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array( 'kaltura_entry_settings_form' ),
+    'access arguments' => array( 'administer kaltura' ),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -7,
+  );
+  return $items;
+}
+
+/*
+ * provides admin settings page for entry nodes
+ * currently - the only settings are the taxonomy vocabularies corresponding to tags and admin tags of kaltura item
+ */
+function kaltura_entry_settings_form() {
+  global $base_path;
+
+  $form['entry_wizards'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Wizards'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#weight' => 0,
+  );
+
+  list($regular, $custom) =   kaltura_choose_cw('kaltura_video_entry_cw_type', 'kaltura_video_entry_cw_custom');
+  $form['entry_wizards']['kaltura_video_entry_cw_type'] = $regular;
+  $form['entry_wizards']['kaltura_video_entry_cw_custom'] = $custom;
+
+  $taxonomy_array = taxonomy_get_vocabularies($type = 'kaltura_entry');
+  $options[] = '';
+  foreach ($taxonomy_array as $voc) {
+    if ($voc->tags == 1) {
+      $options[$voc->vid] = $voc->name;
+    }
+  }
+
+  $form['entry_taxonomy'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Taxonomy',
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#weight' => -1,
+  );
+  $form['entry_taxonomy']['kaltura_entry_tags_voc'] = array(
+    '#title' => 'Taxonomy Vocabulary for Tags',
+    '#description' => 'must be a \'free tagging\' vocabulary that is enabled for kaltura entry content type<br />'.
+    'only vocabularies that meets these requirements will apear in the list',
+    '#type' => 'select',
+    '#options' => $options,
+    '#default_value' => variable_get('kaltura_entry_tags_voc', ''),
+    '#required' => FALSE,
+  );
+  $form['entry_taxonomy']['kaltura_entry_admin_tags_voc'] = array(
+    '#title' => 'Taxonomy Vocabulary for Admin Tags',
+    '#description' => 'must be a \'free tagging\' vocabulary that is enabled for kaltura entry content type<br />'.
+    'only vocabularies that meets these requirements will apear in the list',
+    '#type' => 'select',
+    '#options' => $options,
+    '#default_value' => variable_get('kaltura_entry_admin_tags_voc', ''),
+    '#required' => FALSE,
+  );
+  $form['kaltura_entry_video_display'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Video Display'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#weight' => -4,
+  );
+  $dynamic_dimension_js = '
+  <script type="text/javascript">
+  function set_video_player_dimension(uiconf)
+  {
+  document.getElementById("edit-kaltura-video-entry-height").value=get_video_player_height(uiconf);
+  document.getElementById("edit-kaltura-video-entry-width").value=get_video_player_width(uiconf);
+  }
+  </script>
+  ';
+  $saved_player = variable_get('kaltura_video_entry_widget', KalturaSettings_DEFAULT_VIDEO_PLAYER_UICONF);
+  $players = kaltura_choose_player(0, 'video', 'entry', FALSE, $saved_player);
+  $form['kaltura_entry_video_display']['kaltura_video_entry_widget'] = $players['default_widget'];
+  $form['kaltura_entry_video_display']['kaltura_video_entry_widget']['#default_value'] = $saved_player;
+  $form['kaltura_entry_video_display']['clear_block_item'] = array(
+    '#type' => 'item',
+    '#value' => $dynamic_dimension_js . '<div class="clear-block"></div>',
+  );
+  $form['kaltura_entry_video_display']['kaltura_video_entry_delivery_type'] = array(
+    '#type' => 'select',
+    '#title' => t('Delivery Type'),
+    '#options' => array( 'HTTP' => 'Progressive Download (HTTP)', 'RTMP' => 'Adaptive Streaming (RTMP)'),
+    '#default_value' => variable_get('kaltura_video_entry_delivery_type', 'HTTP'),
+  );
+    
+  $form['kaltura_entry_video_display']['kaltura_video_entry_player_ratio'] = array(
+    '#type' => 'select',
+    '#title' => t('If media aspect ratio is different then player aspect ratio'),
+    '#options' => array( 1 => 'Keep original media ratio', 0 => 'strech media to fit player'),
+    '#description' => t('Note - you might want to change the player width and height to fit the selected ratio'),
+    '#default_value' => variable_get('kaltura_video_entry_player_ratio', 0),
+  );
+  $form['kaltura_entry_video_display']['kaltura_video_entry_width'] = array(
+    '#type' => 'textfield',
+    '#size' => 5,
+    '#title' => t('Player Width'),
+    '#default_value' => variable_get('kaltura_video_entry_width', '410'),
+  );
+  $form['kaltura_entry_video_display']['kaltura_video_entry_height'] = array(
+    '#type' => 'textfield',
+    '#size' => 5,
+    '#title' => t('Player Height'),
+    '#default_value' => variable_get('kaltura_video_entry_height', '364'),
+  );
+  $form['kaltura_entry_video_display']['kaltura_video_entry_thumb_width'] = array(
+    '#type' => 'textfield',
+    '#size' => 5,
+    '#title' => t('Thumbnail Width'),
+    '#default_value' => variable_get('kaltura_video_entry_thumb_width', '120'),
+  );
+  $form['kaltura_entry_video_display']['kaltura_video_entry_thumb_height'] = array(
+    '#type' => 'textfield',
+    '#size' => 5,
+    '#title' => t('Thumbnail Height'),
+    '#default_value' => variable_get('kaltura_video_entry_thumb_height', '90'),
+  );
+  
+  $form['kaltura_entry_video_display']['kaltura_entry_rotate_thumb'] = array(
+    '#type' => 'radios',
+    '#title' => t('Rotate Thumbnails for Video Items'),
+    '#options' => array( 0 => 'no', 1 => 'yes' ),
+    '#default_value' => variable_get('kaltura_entry_rotate_thumb', 1),
+  );
+  if (variable_get('kaltura_notification_type', 0) == 1) {
+    $form['kaltura_entry_video_display']['display_entry_not_ready'] = array(
+      '#type' => 'radios',
+      '#title' => 'How would you like to display entry which is not ready ?',
+      '#options' => array( 0 => 'Display in player even if not ready', 1 => 'Display textual warning' ),
+      '#default_value' => variable_get('display_entry_not_ready', 0),
+    );
+    if (variable_get('display_entry_not_ready', 0) != 0) {
+      $form['kaltura_entry_video_display']['entry_not_ready_text'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Entry Not Ready Text'),
+        '#maxlength' => 128,
+        '#description' => t('what text to display if entry not ready ?'),
+        '#default_value' => variable_get('entry_not_ready_text', 'This Kaltura Item is still rendering.'),
+      );
+    }
+  }
+  $form['kaltura_entry_video_display']['kaltura_display_entry_video_teaser_with_player'] = array(
+    '#type' => 'radios',
+    '#title' => t('In Teaser Mode - Display Only Thumbnail'),
+    '#options' => array( '0' => 'Only thumbnail', '1' => 'Thumbnail and player' ),
+    '#default_value' => variable_get('kaltura_display_entry_video_teaser_with_player', '0'),
+  );  
+
+  $form['kaltura_entry_image_display'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Image Display'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#weight' => -3,
+  );
+  $form['kaltura_entry_image_display'][''] = array(
+    '#type' => 'item',
+    '#title' => t('Image width/height'),
+    '#description' => t('0x0 dimensions will display the image in its original size'),
+  );
+  $form['kaltura_entry_image_display']['kaltura_image_entry_width'] = array(
+    '#type' => 'textfield',
+    '#size' => 5,
+    '#title' => t('Image Width'),
+    '#default_value' => variable_get('kaltura_image_entry_width', '410'),
+  );
+  $form['kaltura_entry_image_display']['kaltura_image_entry_height'] = array(
+    '#type' => 'textfield',
+    '#size' => 5,
+    '#title' => t('Image Height'),
+    '#default_value' => variable_get('kaltura_image_entry_height', '364'),
+  );
+  $form['kaltura_entry_image_display']['kaltura_image_entry_thumb_width'] = array(
+    '#type' => 'textfield',
+    '#size' => 5,
+    '#title' => t('Thumbnail Width'),
+    '#default_value' => variable_get('kaltura_image_entry_thumb_width', '120'),
+  );
+  $form['kaltura_entry_image_display']['kaltura_image_entry_thumb_height'] = array(
+    '#type' => 'textfield',
+    '#size' => 5,
+    '#title' => t('Thumbnail Height'),
+    '#default_value' => variable_get('kaltura_image_entry_thumb_height', '90'),
+  );
+  
+  $form['kaltura_entry_audio_display'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Audio Display'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#weight' => -2,
+  );
+  $saved_player = variable_get('kaltura_audio_entry_widget', KalturaSettings_DEFAULT_AUDIO_PLAYER_UICONF);
+  $players = kaltura_choose_player(0, 'audio', 'entry', FALSE, $saved_player);
+  $form['kaltura_entry_audio_display']['kaltura_audio_entry_widget'] = $players['default_widget'];
+  $form['kaltura_entry_audio_display']['kaltura_audio_entry_widget']['#default_value'] = $saved_player;
+  $form['kaltura_entry_audio_display']['clear_block_item'] = array(
+    '#type' => 'item',
+    '#value' => '<div class="clear-block"></div>',
+  );
+  return system_settings_form($form);
+}
+
+/**
+ * Implementation of hook_node_info().
+ */
+function node_kaltura_entry_node_info() {
+  return array(
+    'kaltura_entry' => array(
+      'name' => t('Kaltura Media Node'),
+      'module' => 'node_kaltura_entry',
+      'description' => t('A Kaltura Media Node is a simple method for creating and displaying rich media (Video, Audio or Image). '.
+                     'It allows upload from local computer and supports almost all video and audio formats, as well as recording directly from webcam. '.
+                     'In addition it supports easy import of all rich media (video, audio, pictures...) from other sites and social networks. '),
+    )
+  );
+}
+
+/**
+ * Implementation of hook_form().
+ *
+ * Determine how the "add node" form, of entry node, will look like
+ *
+ * All we do is to set the fields available in edit mode and add mode
+ *
+ * in add mode, the user only gets the contribution wizard
+ * each add entry that the CW is doing, is being reported to drupal via notification (straight from the CW)
+ * and a node is created using the notification by notification_handler
+ *
+ */
+function node_kaltura_entry_form(&$node, &$param) {
+  global $user;
+  // TODO: change this function for new CW (???)
+  $type = node_get_types('type', $node);
+  if ($node->nid) {
+    $form['title'] = array(
+      '#type' => 'textfield', 
+      '#title' => check_plain($type->title_label), 
+      '#required' => TRUE, 
+      '#default_value' => $node->title, 
+      '#weight' => -5
+    );
+
+    $form['body_filter']['body'] = array(
+      '#type' => 'textarea', 
+      '#title' => check_plain($type->body_label), 
+      '#default_value' => $node->body, 
+      '#rows' => 20, 
+      '#required' => FALSE
+    );
+
+    $form['kaltura_tags'] = array(
+      '#type' => 'hidden', 
+      '#title' => 'tags', 
+      '#required' => FALSE, 
+      '#default_value' => $node->tags 
+    );
+  
+    $form['kaltura_entryId'] = array(
+      '#type' => 'hidden', 
+      '#default_value' => $node->kaltura_entryId 
+    );
+    $form['media_preview'] = array(
+      '#type' => 'item',
+      '#title' => t('Media'),
+      '#value' => kaltura_replace_tags(theme('node_kaltura_entry_entryId', $node, 0)),
+    );
+
+    $form['kaltura_admin_tags'] = array(
+      '#type' => 'hidden', 
+      '#title' => 'admin tags', 
+      '#required' => FALSE, 
+      '#default_value' => $node->kaltura_admin_tags 
+    );
+    $form['kstatus'] = array(
+      '#type' => 'hidden',
+      '#default_value' => $node->kstatus
+    );
+    $form['kaltura_total_rank'] = array(
+      '#type' => 'hidden',
+      '#default_value' => $node->kaltura_total_rank
+    );
+    $form['kaltura_rank'] = array(
+      '#type' => 'hidden',
+      '#default_value' => $node->kaltura_rank
+    );
+    $form['kaltura_votes'] = array(
+      '#type' => 'hidden',
+      '#default_value' => $node->kaltura_votes
+    );
+    $form['kaltura_plays'] = array(
+      '#type' => 'hidden',
+      '#default_value' => $node->kaltura_plays
+    );
+    $form['kaltura_views'] = array(
+      '#type' => 'hidden',
+      '#default_value' => $node->kaltura_views
+    );
+    $form['kaltura_media_date'] = array(
+      '#type' => 'hidden',
+      '#default_value' => $node->kaltura_media_date
+    );
+    $form['kaltura_download_url'] = array(
+      '#type' => 'hidden',
+      '#default_value' => $node->kaltura_download_url
+    );
+    $form['kaltura_height'] = array(
+      '#type' => 'hidden',
+      '#default_value' => $node->kaltura_height
+    );
+    $form['kaltura_width'] = array(
+      '#type' => 'hidden',
+      '#default_value' => $node->kaltura_width
+    );
+    $form['kaltura_source_link'] = array(
+      '#type' => 'hidden',
+      '#default_value' => $node->kaltura_source_link
+    );
+    $form['kaltura_source_id'] = array(
+      '#type' => 'hidden',
+      '#default_value' => $node->kaltura_source_id
+    );
+    $form['kaltura_source'] = array(
+      '#type' => 'hidden',
+      '#default_value' => $node->kaltura_source
+    );
+    $form['kaltura_partner_data'] = array(
+      '#type' => 'hidden',
+      '#default_value' => $node->kaltura_partner_data
+    );
+    $form['kaltura_thumbnail_url'] = array(
+      '#type' => 'hidden',
+      '#default_value' => $node->kaltura_thumbnail_url
+    );
+    $form['kaltura_duration'] = array(
+      '#type' => 'hidden',
+      '#default_value' => $node->kaltura_duration
+    );
+    $form['kaltura_media_type'] = array(
+      '#type' => 'hidden',
+      '#default_value' => $node->kaltura_media_type
+    );
+  }
+  else {    
+    $partner_data = "user_id@". $user->uid;
+    $cw_vars = kaltura_format_cw_vars(array(
+                 'kshow_id' => -2,
+                 'partner_data' => $partner_data,
+                 'title' => 'My Kaltura Media',
+                 //'context' => 'kaltura_entry',
+
+      
+               ));
+/*    $form["add_kaltura"] = array(
+      "#prefix" => "<div class=\"add_video_to_node\"><script>jQuery(document).ready(function(){ kalturaInitModalBox('" . url("kaltura/contribution_wizard/". $cw_vars) ."'); 
+      });</script>",
+      "#type" => "item",
+      "#value" => "",
+      "#suffix" => "</div>"
+      ); */
+    drupal_add_js("Drupal.behaviors.kalturaEntryModal = function(context){ kalturaInitModalBox('" . url("kaltura/contribution_wizard/". $cw_vars) ."'); };", 'inline');
+    
+  }
+  return $form;
+}
+
+/*
+ * Implementation of hook_theme().
+ */
+function node_kaltura_entry_theme() {
+  $themes = array(
+    'node_kaltura_entry_tags' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'node_kaltura_entry_admin_tags' => array(
+      'arguments' => array('themeParams' => NULL),
+    ),
+    'node_kaltura_entry_entryId' => array(
+      'arguments' => array('themeParams' => NULL),
+    ),
+    'node_kaltura_entry_thumbnail_url' => array(
+      'arguments' => array('themeParams' => NULL),
+    ),
+    'node_kaltura_entry_duration' => array(
+      'arguments' => array('themeParams' => NULL),
+    ),    
+  );
+  
+  return $themes;
+}
+
+/*
+ * Implementation of hook_form_alter().
+ *
+ * in add mode, we want to hide fields and settings that are not relevant
+ */
+function node_kaltura_entry_form_alter(&$form, &$form_state, $form_id) {
+  if ($form_id == 'kaltura_entry_node_form' && !$form['nid']['#value']) {
+    if (isset($form["type"]) && $form["type"]["#value"] ."_node_form" == $form_id) {
+      unset($form["author"]);
+      unset($form["taxonomy"]);
+      unset($form["revision_information"]);
+      unset($form["log"]);
+      unset($form['menu']);
+    }
+  }
+}
+
+/*
+ * helper function to inject the node with tags and admin tags to the
+ * corresponding taxonomy vocabularies
+ */
+function update_entry_node_taxonomy(&$node) {
+  $voc_id = variable_get('kaltura_entry_tags_voc', '');
+  $avoc_id = variable_get('kaltura_entry_admin_tags_voc', '');
+  $terms['tags'] = array();
+  if ($voc_id) {
+    $terms['tags'][$voc_id] = $node->kaltura_tags;
+  }  
+  if ($avoc_id) {
+    if ($voc_id == $avoc_id)
+      $terms['tags'][$avoc_id] .= ','. $node->kaltura_admin_tags;
+    else 
+      $terms['tags'][$avoc_id] = $node->kaltura_admin_tags;
+  }
+  $node->taxonomy = $terms;
+  taxonomy_node_save($node, $terms);
+}
+
+
+/**
+ * Implementation of hook_insert().
+ */
+function node_kaltura_entry_insert(&$node) {
+
+  $sql = 'INSERT INTO {node_kaltura} (vid, nid, kaltura_entryId, kaltura_tags, kaltura_admin_tags, kstatus, kaltura_media_type, kaltura_duration, '.
+    'kaltura_thumbnail_url, kaltura_partner_data, kaltura_source, kaltura_source_id, kaltura_source_link, kaltura_width, kaltura_height, '.
+    'kaltura_download_url, kaltura_media_date, kaltura_views, kaltura_plays, kaltura_votes, kaltura_rank, kaltura_total_rank, kaltura_entry_data, kaltura_video_comment)'.
+    ' VALUES (%d, %d, \'%s\', \'%s\', \'%s\', %d, %d, %d, \'%s\', \'%s\', %d, %d, \'%s\', %d, %d, \'%s\', \'%s\', %d, %d, %d, %d, %d, \'%s\', %d)';
+  db_query($sql, $node->vid, $node->nid, $node->kaltura_entryId, $node->kaltura_tags, $node->kaltura_admin_tags, $node->kstatus, $node->kaltura_media_type,
+    $node->kaltura_duration, $node->kaltura_thumbnail_url, $node->kaltura_partner_data, $node->kaltura_source, $node->kaltura_source_id,
+    $node->kaltura_source_link, $node->kaltura_width, $node->kaltura_height, $node->kaltura_download_url, $node->kaltura_media_date, $node->kaltura_views,
+    $node->kaltura_plays, $node->kaltura_votes, $node->kaltura_rank, $node->kaltura_total_rank, $node->kaltura_entry_data, $node->kaltura_video_comment);
+  update_entry_node_taxonomy($node);
+}
+
+/**
+ * Implementation of hook_validate().
+ *
+ * We don't do this validation if:
+ * (0) we're creating the node (it won't exist remotely yet)
+ * (1) this update is an update_notification from Kaltura anyway
+ * (2) we're deleting the node
+ */
+function node_kaltura_entry_validate($node, &$form) {
+  if (!empty($node->nid) && $node->notification_update !== TRUE && $form['#post']['op'] != t('Delete')) {
+    try {
+      $entry = kaltura_get_entry($form['kaltura_entryId']['#value']) ;
+    }
+    catch ( Exception $ex ) {
+      watchdog('node_kaltura_entry', t('Kaltura Exception: %message, backtrace: <pre>!trace</pre>'), array('%message' => $ex->getMessage(), '!trace' => $ex->getTrace()));
+      switch ( $ex->getCode() ) {
+        case 'ENTRY_ID_NOT_FOUND' :
+          form_set_error('kaltura_entryId', t('Entry not found on Kaltura server: @message', array('@message' => $ex->getMessage())));
+          break ;
+        default :
+          form_set_error('kaltura_entryId', t('Kaltura client exception: @message', array('@message' => $ex->getMessage()))); 
+      }
+    }
+  }
+}
+
+/**
+ * Implementation of hook_update().
+ *
+ * This hook can be initiated in two cases:
+ * 1) the node was updated in drupal
+ * 2) the node was updated in kaltura (or in one of kaltura's widgets) and a notification of update_entry was received
+ */
+function node_kaltura_entry_update($node) {
+  // if this is a new node or we're adding a new revision,
+  if ($node->revision) {
+    node_example_insert($node);
+  }
+  else {
+    require_once(drupal_get_path('module', 'kaltura') .'/kaltura.install');
+    $fields = kaltura_schema();
+    $first = '';
+    watchdog('kaltura_node_entry', print_r($node, TRUE));
+    foreach ($fields['node_kaltura']['fields'] as $field => $structure) {
+      if ($field == 'vid' || $field == 'nid' || $field == 'kaltura_entryId' || $field == 'kaltura_video_comment' || $field == 'kaltura_entry_data') continue;
+      $update_str .= $first . $field .' = '. (($structure['type'] == 'int')? "%d": "'%s'");
+      $first = ', ';
+    }
+    // we don't expose the tags and admin tags fields, to no need to update taxonomy by hand.
+//    update_entry_node_taxonomy($node);
+    if ($node->notification_update !== TRUE) {
+      kaltura_update_entry_tags_from_taxonomy($node);
+    }
+        
+    $sql = 'UPDATE {node_kaltura} SET '. $update_str .' WHERE vid = %d';
+    db_query($sql, $node->kaltura_tags, $node->kaltura_admin_tags, $node->kstatus, $node->kaltura_media_type, $node->kaltura_duration,
+      $node->kaltura_thumbnail_url, $node->kaltura_partner_data, $node->kaltura_source, $node->kaltura_source_id, $node->kaltura_source_link,
+      $node->kaltura_width, $node->kaltura_height, $node->kaltura_download_url, $node->kaltura_media_date, $node->kaltura_views, $node->kaltura_plays,
+      $node->kaltura_votes, $node->kaltura_rank, $node->kaltura_total_rank, $node->vid);
+    // in case the update was done in drupal, and not by notification, we want to update
+    // the metadata in kaltura's DB
+    if ($node->notification_update !== TRUE) {
+      // @TODO: Handle exceptions etc with Kaltura
+      kaltura_update_entry_tags($node->kaltura_entryId, $node->kaltura_tags, $node->kaltura_admin_tags);
+    }
+    else {
+      // updated through notification. no need to call Kaltura API
+    }
+  }
+}
+
+/*
+ * helper function that takes a node's taxonomy tags
+ * and pushes it into the kaltura tags field
+ */
+function kaltura_update_entry_tags_from_taxonomy(&$node) {
+  $voc = variable_get('kaltura_entry_tags_voc', '');
+  if ($voc != '') {
+    $tags = $node->taxonomy['tags'][$voc];
+    $node->kaltura_tags = $tags;
+  }
+  $voc = variable_get('kaltura_entry_admin_tags_voc', '');
+  if ($voc != '') {
+    $tags = $node->taxonomy['tags'][$voc];
+    $node->kaltura_admin_tags = $tags;
+  }
+}
+
+/*
+ * Implementation of hook_delete().
+ */
+function node_kaltura_entry_delete($node) {
+  $del_sql = 'DELETE FROM {node_kaltura} WHERE nid = %d';
+  db_query($del_sql, $node->nid);
+}
+
+/**
+ * Implementation of hook_load().
+ */
+function node_kaltura_entry_load($node) {
+  $sql = 'SELECT kaltura_entryId, kaltura_tags, kaltura_admin_tags, kstatus, kaltura_media_type, kaltura_duration, kaltura_thumbnail_url, '.
+    'kaltura_partner_data, kaltura_source, kaltura_source_id, kaltura_source_link, kaltura_width, kaltura_height, kaltura_download_url, '.
+    'kaltura_media_date, kaltura_views, kaltura_plays, kaltura_votes, kaltura_rank, kaltura_total_rank, kaltura_entry_data 
+     FROM {node_kaltura} WHERE vid = %d';
+  $result = db_query($sql, $node->vid);
+  
+  $additions = db_fetch_object($result);
+  return $additions;
+}
+
+/**
+ * Implementation of hook_view().
+ */
+function node_kaltura_entry_view($node, $teaser = FALSE, $page = FALSE) {
+  $node = node_prepare($node, $teaser);
+  $node->content['kaltura_tags'] = array(
+    '#value' => theme('node_kaltura_entry_tags', $node),
+    '#weight' => 1,
+  );
+  $node->content['kaltura_admin_tags'] = array(
+    '#value' => theme('node_kaltura_entry_admin_tags', $node),
+    '#weight' => 6,
+  );
+  if ($node->kaltura_entryId) {
+    $node->content['kaltura_entry'] = array(
+      '#value' => theme('node_kaltura_entry_entryId', $node, $teaser),
+      '#weight' => 7,
+    );
+  }
+  if ($teaser == 1)
+    {
+      $node->content['kaltura_thumbnail_url'] = array(
+        '#value' => theme('node_kaltura_entry_thumbnail_url', $node, $teaser),
+        '#weight' => 0,
+      );
+    }
+  $node->content['kaltura_duration'] = array(
+    '#value' => theme('node_kaltura_entry_duration', $durationoutput),
+    '#weight' => 0,
+  );  
+  return $node;
+}
+
+/*
+ * function to render the entryId field into HTML
+ * 
+ * the returned value is a normal string with a specific structure
+ * this "tag" is being later replaced using nodeAPI to the kaltura embed tags
+ */
+function theme_node_kaltura_entry_entryId($node, $teaser) {
+  if ($teaser && variable_get('kaltura_display_entry_video_teaser_with_player', 0) == 0) return '';
+  if ($node->kaltura_media_type == 2) {
+    $width = variable_get('kaltura_image_entry_width', '410');
+    $height = variable_get('kaltura_image_entry_height', '364');
+    return '<img src="'. $node->kaltura_thumbnail_url .'/width/'. $width .'/height/'. $height .'/type/1/quality/100" />';
+  }
+  if ($node->kaltura_media_type == 5) {
+    $media_type = 'audio';
+    $width = variable_get('kaltura_audio_entry_width', '410');
+    $height = variable_get('kaltura_audio_entry_height', '364');
+    return '[kaltura-widget media_type="'. $media_type .'" entry="'. $node->kaltura_entryId .'" size="large" width="'. $width .'" height="'. $height .'" /]';
+  }
+  $width = variable_get('kaltura_video_entry_width', '410');
+  $height = variable_get('kaltura_video_entry_height', '364');
+  if ($node->kstatus == 0 && variable_get('display_entry_not_ready', 0) != 0) {
+    if (variable_get('entry_not_ready_text', '') != '') return variable_get('entry_not_ready_text', '');
+    return t('This Kaltura Item is still rendering.');
+  }  
+  $media_type = 'video';
+  $return = '[kaltura-widget media_type="'. $media_type .'" entry="'. $node->kaltura_entryId .'" size="large" width="'. $width .'" height="'. $height .'" /]';
+  return $return;
+}
+
+/*
+ * function to render the admin_tags field into HTML
+ */
+function theme_node_kaltura_entry_admin_tags($node) {
+  if ($node->kaltura_admin_tags) {
+    $admin_tags = "<div class=\"kaltura_admin_tags\"><label class=\"field_title\">". t('Kaltura Admin Tags') .": </label>". check_plain($node->kaltura_admin_tags) .'</div>';
+  }
+  return $admin_tags;
+}
+
+/*
+ * function to render the thumbnail_url field into HTML
+ */
+function theme_node_kaltura_entry_thumbnail_url($node, $teaser, $nosize = FALSE, $size = array()) {
+
+  $skip = FALSE;
+  if (isset($size['width']) && isset($size['height'])) {
+    $width = $size['width'];
+    $height = $size['height'];
+    $skip = TRUE;
+  }
+  if ($node->kaltura_media_type == 1 && !$skip) {
+    $width = variable_get('kaltura_video_entry_thumb_width', '120');
+    $height = variable_get('kaltura_video_entry_thumb_height', '90');
+  }
+  elseif (!$skip) {
+    $width = variable_get('kaltura_image_entry_thumb_width', '120');
+    $height = variable_get('kaltura_image_entry_thumb_height', '90');
+  }
+  if ($node->kaltura_media_type == 1 && $node->kstatus == 2 && variable_get('kaltura_entry_rotate_thumb', 1) == 1) {
+    $extra = 'onmouseover="KalturaThumbRotator.start(this)" onmouseout="KalturaThumbRotator.end(this)"';
+  }
+  $size_str = '';
+  if ($nosize == FALSE) {
+    $size_str = '/width/'. $width .'/height/'. $height;
+  }
+  if ($node->link_thumb || $teaser)
+    return '<div class="kaltura_thumb"><a href="'. url('node/'. $node->nid) .'"><img src="'. $node->kaltura_thumbnail_url . $size_str .'" '. $extra .' /></a></div>';
+  else
+    return '<div class="kaltura_thumb"><img src="'. $node->kaltura_thumbnail_url . $size_str .'" '. $extra .' /></div>';
+}
+
+/*
+ * function to render the tags field into HTML
+ */
+function theme_node_kaltura_entry_tags($node) {
+  if ($node->kaltura_tags) {
+    $tags = "<div class=\"kaltura_tags\"><label class=\"field_title\">". t('Kaltura Tags') .": </label>". check_plain($node->kaltura_tags) .'</div>';
+  }
+  return $tags;
+}
+
+/*
+ * function to render the duration field into HTML
+ */
+function theme_node_kaltura_entry_duration($durationoutput) {
+  return $durationoutput;
+}
+
+/*
+ * This function calls Kaltura API to update metadata of a mix in the kaltura DB
+ * TODO
+ * CMAC
+ * changed :
+ * changed KalturaEntry to KalturaMediaEntry
+ * update to new update function
+ * result parameter to object
+ * entry name in parameter to $_REQUEST
+ * questions:
+ * correct values for media entry name, tags, should we be getting these from the drupal form or the simple editor
+ *
+ * @TODO return meaningful value so calling function can detect
+ * failures (eg, media has been deleted from Kaltura)
+ *
+ */
+function kaltura_update_entry_tags($eid, $tags, $admin_tags) {
+  $admin = 0;
+  $need_admin = 1; //who should init this? Anyway since we update admin_tags the answer is yes we need  
+  if ($need_admin) {
+    $admin = 1;
+  }
+
+  $kaltura_client = KalturaHelpers::getKalturaClient($admin);
+  $session_user = KalturaHelpers::getSessionUser(); // ?
+  
+  $entry = new KalturaMediaEntry;
+  $entry->tags = $tags;
+  $entry->admin_tag = $admin_tags;
+  $entry->name = $_REQUEST['title'];
+  $entry->description = $_REQUEST['body'];
+
+  try {
+    $result = $kaltura_client->media->update($eid, $entry);
+    // If we want to collect more data, we can call this function with 3rd parameter FALSE:
+    kaltura_add_result_to_entry_data($eid, $result);
+  }
+  catch ( Exception $ex ) {
+    // we catch the exception here, but typically this would be caught
+    // in hook_validate() already. 
+    watchdog('node_kaltura_entry', t('Kaltura Exception: %message, backtrace: <pre>!trace</pre>'), array('%message' => $ex->getMessage(), '!trace' => $ex->getTrace()));
+    drupal_set_message(t('Kaltura client exception: @message', array('@message' => $ex->getMessage())), 'error'); 
+  }
+}

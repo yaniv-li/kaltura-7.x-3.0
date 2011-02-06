@@ -1,0 +1,98 @@
+<?php
+// $Id: kaltura_comments.module,v 1.2.2.6.2.1 2010/08/10 02:29:13 univate Exp $
+
+/*
+ * @file
+ * Should add functionality to add kaltura items inline within body (as filter)
+ *
+ */
+
+function kaltura_comments_comment(&$a1, $op) {
+  switch ($op) {
+    case 'view':
+      $comment = kaltura_replace_tags($a1->comment, $comment = TRUE);
+      $a1->comment = $comment;
+      break;
+  }
+}
+
+/*
+ * Implementation of hook_form_alter().
+ */
+function kaltura_comments_form_alter(&$form, &$form_state, $form_id) {
+  if ($form_id == 'comment_form') {
+    $cw_vars = kaltura_format_cw_vars(array(
+      'kshow_id' => -2,
+      'partner_data' => 'entry_as_comment@yes',
+      'type' => '',
+      'context' => 'comment',
+      'field_id' => 'edit-comment',
+    ));
+    $form['video_comment'] = array(
+      '#type' => 'item',
+      '#value' => '<input type="button" value="'. t('Video Comment') .'" onclick="kalturaInitModalBox(\''. url('kaltura/contribution_wizard/'. $cw_vars) .'\');" />',
+      '#title' => t('Add Video Comment'),
+    );
+  }
+}
+
+/*
+ * Implementation of hook_menu().
+ */
+function kaltura_comments_menu() {
+  $items = array();
+  $items['admin/settings/kaltura/kaltura_comments_settings'] = array(
+    'title' => 'Video Comments Settings',
+    'description' => 'Administer the Kaltura video comments module.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array( 'kaltura_vc_settings_form' ),
+    'access arguments' => array('administer kaltura'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -6,
+  );
+  return $items;
+}
+
+/*
+ * kaltura video comments module settings form
+ */
+function kaltura_vc_settings_form() {
+  $form['kaltura_comment_display'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Display settings'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#weight' => -1
+  );
+  
+  $saved_player = variable_get('kaltura_comment_entry_widget', KalturaSettings_DEFAULT_COMMENT_PLAYER_UICONF);
+  $players = kaltura_choose_player(0, 'comment', 'mix', FALSE, $saved_player);
+  $form['kaltura_comment_display']['kaltura_comment_entry_widget'] = $players['default_widget'];
+  $form['kaltura_comment_display']['kaltura_comment_entry_widget']['#default_value'] = $saved_player;
+  $form['kaltura_comment_display']['clear_block_item'] = array(
+    '#type' => 'item',
+    '#value' => '<div class="clear-block"></div>',
+  );
+  
+  $form['kaltura_comment_display']['kaltura_comment_delivery_type'] = array(
+    '#type' => 'select',
+    '#title' => t('Delivery Type'),
+    '#options' => array( 'HTTP' => 'Progressive Download (HTTP)', 'RTMP' => 'Adaptive Streaming (RTMP)'),
+    '#default_value' => variable_get('kaltura_comment_delivery_type', 'HTTP'),
+  );
+  
+  $form['kaltura_comment_display']['kaltura_comment_width'] = array(
+    '#type' => 'textfield',
+    '#size' => 5,
+    '#title' => t('Width (in pixels)'),
+    '#default_value' => variable_get('kaltura_comment_width', '250'),
+  );
+  $form['kaltura_comment_display']['kaltura_comment_height'] = array(
+    '#type' => 'textfield',
+    '#size' => 5,
+    '#title' => t('Height (in pixels)'),
+    '#default_value' => variable_get('kaltura_comment_height', '244'),
+  );
+  
+  return system_settings_form($form);
+}

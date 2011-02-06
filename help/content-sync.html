@@ -1,0 +1,32 @@
+</p><h2>Overview</h2>
+<p>Media uploaded to Kaltura system can be managed from within Drupal management system as well as from Kaltura Management Console (KMC). Sometimes it is necessary to synchronize these systems to make sure media content is up-to-date on both systems and to enable synchronized workflows. Synchronization between Kaltura and Drupal is done in several ways, and in various scenarios. Below are few examples to such synchronization use cases.</p>
+<p>
+</p><h2>On Going Synchronization</h2>
+<ul style="list-style-type: circle;">
+<li> <span style="font-weight: bold;">Drupal to Kaltura</span><br>
+<ol style="list-style-type: decimal;">
+<li> Metadata - All metadata changes done on Drupal affect only Drupal local database. Updates are not automatically sent back to the Kaltura system. A Drupal site administrator can run a cron job from Drupal to activate such updates a-synchronically.</li>
+<li> Entry Deletion - To make sure an entry that is deleted on Drupal is also deleted on Kaltura’s system; one should add a call to Kaltura Client’s deleteEntry method to the node deletion process manually.</li>
+</ol>
+</li>
+<li> <span style="font-weight: bold;">Kaltura to Drupal</span><br>
+<ol style="list-style-type: decimal;">
+<li> File Upload - The main update required from Kaltura to Drupal is when uploading a media file. As long as client side notifications are active and working and the uploading is done from Drupal’s contribution wizard, nodes will be created in Drupal upon upload completion. However if a node needs to be created when a file is uploaded from the KMC, then the Drupal admin needs to make sure that server side notifications are turned on as well. If these are active then a file uploaded for this partner, no matter where from, will send a notification and generate a node on Drupal.</li>
+<li> Metadata – metadata entry updates on KMC (title, tags, etc) will reflect on Drupal when server side notifications are turned on.</li>
+</ol>
+</li>
+</ul>
+
+<p>
+</p><h2>One time Migration</h2>
+<ul style="list-style-type: circle;">
+<li> <span style="font-weight: bold;">Kaltura to Drupal</span><br>
+<ol style="list-style-type: decimal;">
+<li> New content – When a partner uploads new content to Kaltura through KMC’s bulk upload option, but plans to use Drupal to manage this content, all he needs to do is to make sure his Drupal installation is working properly and server-side notifications are turned on and being sent. After that, uploading from a CSV file using KMC bulk upload option, will initiate notifications which will then generate the relevant nodes on Drupal.</li>
+<li> Existing content – When a partner already has content on the KMC, and then wants to transfer it to Drupal, he would have to use Kaltura’s Drupal import function which is built in the module. In order to activate it, partner should go to <a href="http://www.partner_domain.com/?q=admin/settings/kaltura/import" title="http://www.partner_domain.com/?q=admin/settings/kaltura/import">http://www.partner_domain.com/?q=admin/settings/kaltura/import</a> , and use the import tool available at this page.</li>
+</ol>
+</li>
+<li> <span style="font-weight: bold;">Drupal to Kaltura</span><br>
+Partners, who wish to export Drupal nodes to Kaltura system, should use the KMC bulk upload option and import their drupal content using a CSV file. For more information on the KMC bulk upload option please refer to the <a href="http://www.kaltura.com/lib/pdf/KMC_Quick_Start_Guide.pdf" class="bb-url">KMC quick start guide</a>.</li>
+</ul>
+

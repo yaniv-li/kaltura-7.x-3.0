@@ -1,0 +1,62 @@
+CHANGELOG for Kaltura Module for Drupal 6
+
+Kaltura 2.0
+	oferc:
+   o Working with the Andromeda version
+   o Upgraded to latest KalturaClient
+   o Switched to Session admin when creating entries (in order to be able to update adminTags)
+   o For entry removed the double node creation
+   o Notifications are now working for remix (doesn't duplicate entries)
+   o Reenabled video comments
+   o Change of default players
+   o The import entries page is working
+   o !!!! Bug Fix: uploaded content was attributed to anonymous. The fix might cause problems to users already using the extensions !!!
+     When starting the session we now use the user_id (the correct option) and the not the user name
+   o Change player selection to be fetched from server(+ defualt players)
+   o Native support for kaltura CE
+   o Custom uploaders & editors
+
+Kaltura 1.5
+  Features
+   o module now using KDP v2.x
+   o admins can switch between Simple Editor and Advanced Editor in kaltura_settings.php (I plan to make this a setting available from admin/settings/kaltura)
+   o split 'edit kaltura mix' into 'edit own kaltura mix' and 'edit all kaltura mixes' and differentiate between the two when attempting to remix video
+   o added cloning fucntionality (/kaltura/clone/[entry ID]/[content type]/), and added confirmation page (/kaltura/clone/[entry ID]/[content type]/confirm)
+   	o if user tries to remix another users mix and they don't have 'edit all kaltura mixes' access or access to edit that node, the mix will be cloned and a new node will be created.
+   o added embed code box and 'view Kaltura embed code' permission
+   
+
+Internal Bug Fixes:
+  o Various fixes to get CCK integration working correctly
+  o Various updates to make code work with api v3
+
+Known Issues:
+   o There's currently no effective difference between Kaltura Mixes and Kaltura Entries
+   o Adding partner information for the first time returns blank screen.  Partner info is saved, however.
+   o Notifications not fully implemented
+
+Kaltura 1.4
+ Features
+   o Cormac: Updated code to use api v3
+
+Kaltura 1.3
+ Features
+   o #351221 - makara: Module files organized in subfolders
+   o New playlist CSS
+   o #351723 - ptwob132: module now supports PHP4
+   o #352076 - richshaw: media field fixed to get all uploads from 1 session
+ Internal Bug Fixes:
+   o Duration formatting in playlist fixed for leading zeros
+   
+Kaltura 1.2
+ Internal Bug Fixes:
+   o function kaltura_use_uiconf invoked a wrong hook "use_widget" - updated to "use_uiconf"
+   o playlist CSS fix for IE
+   o added partner type (102) to partner registration
+   o playlist creation on installation - now verifies that 'views' exists (can't rely on dependencies only)
+   o contribution wizard variables are passed as URL encodeed JSON string
+ Features
+   o SEO links in player can be removed from module's settings
+   
+Kaltura 1.0
+ o Initial release

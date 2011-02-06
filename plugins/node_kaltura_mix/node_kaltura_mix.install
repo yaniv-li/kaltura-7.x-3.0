@@ -1,0 +1,31 @@
+<?php
+// $Id: node_kaltura_mix.install,v 1.2.2.4 2010/07/07 09:34:53 kaltura Exp $
+
+/*
+ * @file
+ * Installation process for kaltura mix node
+ *
+ */
+
+function node_kaltura_mix_install() {
+  if (module_exists('taxonomy')) {
+    $edit['nodes'] = array( 'kaltura_mix' => 1 );
+    $edit['name'] = t('Kaltura Media Remix Tags');
+    $edit['description'] = t('the tags given by the user via flash widget, as well as the tags imported from external sources (youtube, flickr , etc\') will be saved as part of this drupal taxonomy. These tags will be presented to the users, and could be used to create playlists.');
+    $edit['help'] = t('');
+    $edit['multiple'] = TRUE;
+    $edit['required'] = FALSE;
+    $edit['tags'] = TRUE;
+    $edit['module'] = 'node_kaltura_mix';
+    taxonomy_save_vocabulary($edit);
+    variable_set('kaltura_mix_tags_voc', $edit['vid']);
+    unset($edit['vid']);
+    $edit['description'] = t('this tag directory is intended for administrators and content managers (not end users).  It will allow you to easily categorize the content and create playlists.');
+    $edit['name'] = t('Kaltura Media Remix Admin Tags');
+    taxonomy_save_vocabulary($edit);
+    variable_set('kaltura_mix_admin_tags_voc', $edit['vid']);
+  }
+}
+
+function node_kaltura_mix_uninstall() {
+}
