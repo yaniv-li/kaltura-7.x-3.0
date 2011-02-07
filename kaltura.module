@@ -47,7 +47,7 @@ function kaltura_init() {
  */
 function kaltura_permission() {
   return array(
-    'administer kaltura' array (
+    'administer kaltura' => array (
       'title' => t('Administer kaltura'),
     ),
     'access kaltura widgets' => array (
