@@ -63,18 +63,18 @@ function kaltura_permission() {
  * Implementation of hook_menu().
  */
 function kaltura_menu() {
+ //include_once('includes/kaltura.admin.inc');
   $items = array();
 
-  $items['admin/settings/kaltura'] = array(
+  $items['admin/config/kaltura'] = array(
     'title' => 'Kaltura',
-    'file' => 'includes/kaltura.admin.inc',
     'description' => 'List of Kaltura administration pages.',
     'page callback' => 'kaltura_settings_main',
     'access arguments' => array('administer kaltura'),
     'type' => MENU_NORMAL_ITEM
   );
 
-  $items['admin/settings/kaltura/general'] = array(
+  $items['admin/config/kaltura/general'] = array(
     'title' => 'Server Integration Settings',
     'file' => 'includes/kaltura.admin.inc',
     'description' => 'Server integration settings.',
@@ -85,7 +85,7 @@ function kaltura_menu() {
     'weight' => -10,
   );
 
-  $items['admin/settings/kaltura/kaltura_credits_settings'] = array(
+  $items['admin/config/kaltura/kaltura_credits_settings'] = array(
     'title' => 'Credits Settings',
     'file' => 'includes/kaltura.admin.inc',
     'description' => 'Credits Settings',
@@ -96,7 +96,7 @@ function kaltura_menu() {
     'weight' => 10,
   );
 
-  $items['admin/settings/kaltura/entries'] = array(
+  $items['admin/config/kaltura/entries'] = array(
     'title' => 'List of Kaltura Items',
     'page callback' => 'kaltura_list_entries',
     'access callback' => TRUE,
@@ -104,7 +104,7 @@ function kaltura_menu() {
     'weight' => 20,
   );
 
-  $items['admin/settings/kaltura/import'] = array(
+  $items['admin/config/kaltura/import'] = array(
     'title' => 'Importing Entries from Kaltura to Drupal',
     'file' => 'includes/kaltura.admin.inc',
     'description' => 'import your partner\'s entries from kaltura\'s server to drupal, as nodes',
@@ -578,7 +578,8 @@ function kaltura_get_help_html($page) {
       $filename = 'kaltura_cd_help';
       break;
   }
-  $help_html = file_get_contents(drupal_get_path('module', 'kaltura') .'/kaltura_help/'. $filename .'.html');
+  //$help_html = file_get_contents(drupal_get_path('module', 'kaltura') .'/kaltura_help/'. $filename .'.html');
+  $help_html = "";
   return $help_html;
 }
 
