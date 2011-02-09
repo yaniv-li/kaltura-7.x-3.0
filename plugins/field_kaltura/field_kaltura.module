@@ -38,27 +38,28 @@ function field_kaltura_theme() {
  */
 function field_kaltura_field_info() {
   $fields = array();
-  if (module_exists('node_kaltura_entry')) {
-    $fields['Kaltura_Media'] = array(
-      'label' => t('Kaltura Media'),
-      'description' => t('Store text in the database.'),
+    $fields['kaltura_media'] = array(
+      'label' => t('Kaltura Media field'),
+      'description' => t('Kaltura media field.'),
+      'setting' => array (
+        'thumbsize_width' => variable_get('kaltura_video_entry_thumb_width', '120'),
+        'thumbsize_height' => variable_get('kaltura_video_entry_thumb_height', '90'),
+        'player_height' => variable_get('kaltura_video_entry_height', '364'),
+        'player_width' => variable_get('kaltura_video_entry_width', '410'),
+        'delivery' => 'HTTP',
+        'stretch' => 0,
+        'rotate' => 0,
+        //add default settings here
+
+      )
     );
-  }
-  if (module_exists('node_kaltura_mix')) {
-    $fields['Kaltura_Media_Remix'] = array(
-      'label' => t('Kaltura Media Remix'),
-      'description' => t('Store text in the database.'),
-    );
-  }
   return $fields;
 }
 
 /**
- * Implementation of hook_field_settings().
+ * Implementation of hook_field_settings_form().
  */
-function field_kaltura_field_settings($op, $field) {
-  switch ($op) {
-    case 'form':
+function field_kaltura_field_settings_form($field, $instance) {
       $form = array();
 // specific field setting can come here (taxonomy integration/player selection/etc...)
       $form['thumbsize'] = array(
@@ -118,45 +119,85 @@ function field_kaltura_field_settings($op, $field) {
         '#default_value' => !empty($field['dispaly_metadata']) ? $field['dispaly_metadata'] : '0',
       );
 
-	  $default_cw = variable_get('kaltura_video_entry_cw_type', KalturaSettings_CW_UICONF_ID);
-	  $default_cw = !empty($field['entry_cw']) ? $field['entry_cw'] : $default_cw;
-	  $custom_cw = !empty($field['custom_cw']) ? $field['custom_cw'] : '';
-	  list($regular, $custom) = kaltura_choose_cw('kaltura_video_entry_cw_type', 'kaltura_video_entry_cw_custom', $default_cw);
-	  $form['entry_cw'] = $regular;
-	  $form['custom_cw'] = $custom;
+    $default_cw = variable_get('kaltura_video_entry_cw_type', KalturaSettings_CW_UICONF_ID);
+    $default_cw = !empty($field['entry_cw']) ? $field['entry_cw'] : $default_cw;
+    $custom_cw = !empty($field['custom_cw']) ? $field['custom_cw'] : '';
+    list($regular, $custom) = kaltura_choose_cw('kaltura_video_entry_cw_type', 'kaltura_video_entry_cw_custom', $default_cw);
+    $form['entry_cw'] = $regular;
+    $form['custom_cw'] = $custom;
 
-	  $form['custom_cw']['#default_value'] = $custom_cw;
+    $form['custom_cw']['#default_value'] = $custom_cw;
 
-      return $form;
-
-    case 'save':
-      return array('allowed_values', 'allowed_values_php', 'thumbsize_height', 'thumbsize_width', 'entry_widget', 'entry_cw', 'custom_cw', 'player_height', 'player_width', 'dispaly_metadata');
-
-    case 'database columns':
-      $columns['value'] = array('type' => 'text', 'size' => 'big', 'not null' => FALSE, 'sortable' => TRUE);
-      return $columns;
-
-    case 'views data':
-      $allowed_values = content_allowed_values($field);
-      if (count($allowed_values) || 1) {
-        $data = content_views_field_views_data($field);
-        $db_info = content_database_info($field);
-        $table_alias = content_views_tablename($field);
-
-
-        // Filter: Add a 'many to one' filter.
-        $copy = $data[$table_alias][$field['field_name'] .'_value'];
-        $copy['title'] = t('@label (!name) - Allowed values', array('@label' => t($field['widget']['label']), '!name' => $field['field_name']));
-        $copy['filter']['handler'] = 'content_handler_filter_many_to_one';
-        unset($copy['field'], $copy['argument'], $copy['sort']);
-        $data[$table_alias][$field['field_name'] .'_value_many_to_one'] = $copy;
-        // Argument : swap the handler to the 'many to one' operator.
-        $data[$table_alias][$field['field_name'] .'_value']['argument']['handler'] = 'content_handler_argument_many_to_one';
-        return $data;
-      }
-  }
+    return $form;
+}
+function field_kaltura_field_settings_form_validate($element, &$form_state) {
+  //TODO: add valdtion code
 }
 
+    /*case 'database columns':*/
+      /*$columns['value'] = array('type' => 'text', 'size' => 'big', 'not null' => FALSE, 'sortable' => TRUE);*/
+      /*return $columns;*/
+
+
+/**
+ * Implements hook_field_widget_info().
+ **/
+function field_kaltura_field_widget_info() {
+  return array (
+    'video' => array (
+      'label' => t('Video only widget'),
+      'field types' => array ('kaltura_media'),
+      'settings' => array (
+        //put settings here
+      ),
+    ),
+    'audio' => array (
+      'label' => t('adio only widget'),
+      'field types' => array ('kaltura_media'),
+      'settings' => array (
+        //put settings here
+      ),
+    ),
+    'image' => array (
+      'label' => t('image only widget'),
+      'field types' => array ('kaltura_media'),
+      'settings' => array (
+        //put settings here
+      ),
+    ),
+    'all_media' => array (
+      'label' => t('All media types widget'),
+      'field types' => array ('kaltura_media'),
+      'settings' => array (
+        //put settings here
+      ),
+    ),
+  );
+}
+
+/*
+ *    case 'views data':
+ *      $allowed_values = content_allowed_values($field);
+ *      if (count($allowed_values) || 1) {
+ *        $data = content_views_field_views_data($field);
+ *        $db_info = content_database_info($field);
+ *        $table_alias = content_views_tablename($field);
+ *
+ *
+ *        // Filter: Add a 'many to one' filter.
+ *        $copy = $data[$table_alias][$field['field_name'] .'_value'];
+ *        $copy['title'] = t('@label (!name) - Allowed values', array('@label' => t($field['widget']['label']), '!name' => $field['field_name']));
+ *        $copy['filter']['handler'] = 'content_handler_filter_many_to_one';
+ *        unset($copy['field'], $copy['argument'], $copy['sort']);
+ *        $data[$table_alias][$field['field_name'] .'_value_many_to_one'] = $copy;
+ *        // Argument : swap the handler to the 'many to one' operator.
+ *        $data[$table_alias][$field['field_name'] .'_value']['argument']['handler'] = 'content_handler_argument_many_to_one';
+ *        return $data;
+ *      }
+ *  }
+ *}
+ *
+ */
 /**
  * Implementation of hook_form_alter().
  */

@@ -193,7 +193,6 @@ function kaltura_schema() {
 function kaltura_install() {
   $_kaltura_client_folder  = drupal_get_path('module', 'kaltura') .'/kaltura_client/';
   require_once($_kaltura_client_folder .'kaltura_settings.php');
-  drupal_install_schema('kaltura');
   drupal_set_message('<b>To '. l('complete installation', 'admin/settings/kaltura/general') .' of the Kaltura All in One Video Module installation, '.
     'you must '. l('get a Partner ID', 'admin/settings/kaltura/general') .'.</b>');
 }

@@ -8,33 +8,68 @@
  */
 
 /**
- * Implementation of hook_install().
- */
-function field_kaltura_install() {
-  drupal_load('module', 'content');
-  content_notify('install', 'field_kaltura');
-}
+* Implements hook_field_schema().
+*/
+function field_kaltura_field_schema($field) {
+  $columns = array(
+    //'allowed_values',
+    //'allowed_values_php',
+    'entry_id' => array (
+      'description' => 'Kaltura entry id',
+      'type' => 'varchar',
+      'length' => 10,
+      'default' => '',
+      'not null' => TRUE,
+    ),
+    'thumbsize_height' => array (
+      'type' => 'int',
+      'size' => 'tiny',
+      'not null' => FALSE,
+    ),
+    'thumbsize_width' => array (
+      'type' => 'int',
+      'size' => 'tiny',
+      'not null' => FALSE,
+    ),
+    'player_height' => array (
+      'type' => 'int',
+      'size' => 'tiny',
+      'not null' => FALSE,
+    ),
+    'player_width' => array (
+      'type' => 'int',
+      'size' => 'tiny',
+      'not null' => FALSE,
+    ),
+    'delivery' => array (
+      'type' => 'text',
+      'size' => 'tiny',
+      'not null' => TRUE,
+      'default' => 'HTTP',
+    ),
+    'stretch' => array (
+      'type' => 'int',
+      'size' => 'tiny',
+      'not null' => FALSE,
+      'default' => 0,
 
-/**
- * Implementation of hook_uninstall().
- */
-function field_kaltura_uninstall() {
-  drupal_load('module', 'content');
-  content_notify('uninstall', 'field_kaltura');
-}
-
-/**
- * Implementation of hook_enable().
- */
-function field_kaltura_enable() {
-  drupal_load('module', 'content');
-  content_notify('enable', 'field_kaltura');
-}
-
-/**
- * Implementation of hook_disable().
- */
-function field_kaltura_disable() {
-  drupal_load('module', 'content');
-  content_notify('disable', 'field_kaltura');
+    ),
+    'rotate' => array (
+      'type' => 'int',
+      'size' => 'tiny',
+      'not null' => FALSE,
+      'default' => 0,
+    ),
+    /*//'entry_widget',*/
+    /*'entry_cw' => array (*/
+      /*//uiconf*/
+    /*),*/
+    /*'custom_cw' => array (*/
+      /*//uiconf*/
+    /*)*/
+    /*//'dispaly_metadata'*/
+  );
+  return array (
+    'columns' => $columns,
+  );
 }
