@@ -30,6 +30,18 @@ function field_kaltura_theme() {
     'field_kaltura_formatter_thumbnail' => array(
       'arguments' => array('element' => NULL),
     ),
+    /*
+     *'kaltura_contribution_wizard_field' => array (
+     *  'variables' => array (
+     *    'theme_params' => NULL,
+     *    'field_id' => NULL,
+     *    'no_collect_entries' => NULL,
+     *    'kshow_id' => NULL,
+     *    'add_filter' => NULL,
+     *  ),
+     *  'template' => 'kalura_contribution_wizard_field',
+     *),
+     */
   );
 }
 
@@ -49,9 +61,10 @@ function field_kaltura_field_info() {
         'delivery' => 'HTTP',
         'stretch' => 0,
         'rotate' => 0,
+        'kcw' => KalturaSettings_CW_UICONF_ID
         //add default settings here
-
-      )
+      ),
+      'default_widget' => 'all_media',
     );
   return $fields;
 }
@@ -60,6 +73,8 @@ function field_kaltura_field_info() {
  * Implementation of hook_field_settings_form().
  */
 function field_kaltura_field_settings_form($field, $instance) {
+  /*debug($field);*/
+  /*debug($instance);*/
       $form = array();
 // specific field setting can come here (taxonomy integration/player selection/etc...)
       $form['thumbsize'] = array(
@@ -119,14 +134,18 @@ function field_kaltura_field_settings_form($field, $instance) {
         '#default_value' => !empty($field['dispaly_metadata']) ? $field['dispaly_metadata'] : '0',
       );
 
-    $default_cw = variable_get('kaltura_video_entry_cw_type', KalturaSettings_CW_UICONF_ID);
-    $default_cw = !empty($field['entry_cw']) ? $field['entry_cw'] : $default_cw;
-    $custom_cw = !empty($field['custom_cw']) ? $field['custom_cw'] : '';
-    list($regular, $custom) = kaltura_choose_cw('kaltura_video_entry_cw_type', 'kaltura_video_entry_cw_custom', $default_cw);
-    $form['entry_cw'] = $regular;
-    $form['custom_cw'] = $custom;
+    /*$default_cw = variable_get('kaltura_video_entry_cw_type', KalturaSettings_CW_UICONF_ID);*/
+    /*$default_cw = !empty($field['entry_cw']) ? $field['entry_cw'] : $default_cw;*/
+    /*$custom_cw = !empty($field['custom_cw']) ? $field['custom_cw'] : '';*/
+    /*[>list($regular, $custom) = kaltura_choose_cw('kaltura_video_entry_cw_type', 'kaltura_video_entry_cw_custom', $default_cw);<]*/
+    /*$form['entry_cw'] = $regular;*/
+      $form['custom_cw'] = array(
+        '#type' => 'textfield',
+        '#title' => t('custom ui_conf'),
+        '#size' => 6,
+      );
 
-    $form['custom_cw']['#default_value'] = $custom_cw;
+    /*$form['custom_cw']['#default_value'] = $custom_cw;*/
 
     return $form;
 }
@@ -139,41 +158,6 @@ function field_kaltura_field_settings_form_validate($element, &$form_state) {
       /*return $columns;*/
 
 
-/**
- * Implements hook_field_widget_info().
- **/
-function field_kaltura_field_widget_info() {
-  return array (
-    'video' => array (
-      'label' => t('Video only widget'),
-      'field types' => array ('kaltura_media'),
-      'settings' => array (
-        //put settings here
-      ),
-    ),
-    'audio' => array (
-      'label' => t('adio only widget'),
-      'field types' => array ('kaltura_media'),
-      'settings' => array (
-        //put settings here
-      ),
-    ),
-    'image' => array (
-      'label' => t('image only widget'),
-      'field types' => array ('kaltura_media'),
-      'settings' => array (
-        //put settings here
-      ),
-    ),
-    'all_media' => array (
-      'label' => t('All media types widget'),
-      'field types' => array ('kaltura_media'),
-      'settings' => array (
-        //put settings here
-      ),
-    ),
-  );
-}
 
 /*
  *    case 'views data':
@@ -545,6 +529,100 @@ function _field_kaltura_allowed_values($element) {
 }
 
 /**
+ * Implements hook_field_widget_info().
+ **/
+function field_kaltura_field_widget_info() {
+  return array (
+    'video' => array (
+      'label' => t('Video only widget'),
+      'field types' => array ('kaltura_media'),
+      'settings' => array (
+        //put settings here
+      ),
+    ),
+    'audio' => array (
+      'label' => t('adio only widget'),
+      'field types' => array ('kaltura_media'),
+      'settings' => array (
+        //put settings here
+      ),
+    ),
+    'image' => array (
+      'label' => t('image only widget'),
+      'field types' => array ('kaltura_media'),
+      'settings' => array (
+        //put settings here
+      ),
+    ),
+    'all_media' => array (
+      'label' => t('All media types widget'),
+      'field types' => array ('kaltura_media'),
+      'settings' => array (
+        //put settings here
+      ),
+    ),
+  );
+}
+
+function field_kaltura_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
+  $custom_cw  = $form_state['field'][$element['#field_name']][$element['#language']]['field']['settings']['custom_cw'];
+  $element['kaltura_media'] = array();
+  switch ($instance['widget']['type']) {
+  case 'video':
+    $instance['uiconf'] = ($custom_cw) ? $custom_cw : KalturaSettings_CW_UICONF_ID_VIDEO;
+    $widget = kaltura_widget_hendler($instance);
+    $element['kaltura_media'] += $widget;
+    break;
+  case 'audio':
+    $instance['uiconf'] = ($custom_cw) ? $custom_cw : KalturaSettings_CW_UICONF_ID_AUDIO;
+    $widget = kaltura_widget_hendler($instance);
+    $element['kaltura_media'] += $widget;
+    break;
+  case 'image':
+    $instance['uiconf'] = ($custom_cw) ? $custom_cw : KalturaSettings_CW_UICONF_ID_IMAGE;
+    $widget = kaltura_widget_hendler($instance);
+    $element['kaltura_media'] += $widget;
+    break;
+  case 'all_media':
+    $instance['uiconf'] = ($custom_cw) ? $custom_cw : KalturaSettings_CW_UICONF_ID;
+    $widget = kaltura_widget_hendler($instance);
+    $element['kaltura_media'] += $widget;
+    break;
+
+
+
+   }
+
+  return $element;
+}
+
+function kaltura_widget_hendler ($instance) {
+  $cw_vars = kaltura_format_cw_vars(array(
+    'kshow_id' => 0,
+    'partner_data' => '',
+    'type' => 'entry',
+    'context' => 'field',
+    'field_id' => 'id',
+    'ui_conf' => $instance['uiconf'],
+  ));
+
+  $action_buttons = '<input type="button" value="Add Kaltura Media" onclick="kalturaInitModalBox(\''. url('kaltura/contribution_wizard/'. $cw_vars) .'\', {width:680, height:380} );" />';
+  /*
+   *$field_thumbs = kaltura_get_field_thumbs($element['#value'][$field_key], $custom_name, 'Media', $element['#required']);
+   *$element['data'][$custom_name .'_thumbs'] = array(
+   *  '#type' => 'item',
+   *  '#value' => '<div id="'. $custom_name .'_thumbs_div">'. $field_thumbs .'</div>',
+   *);
+   */
+  $widget = array(
+    '#type' => 'item',
+    '#description' => $element['#description'],
+    '#markup' => $action_buttons,
+  );
+  return $widget;
+}
+
+/**
  * Implementation of hook_widget_info().
  *
  * Here we indicate that the content module will handle
@@ -555,26 +633,29 @@ function _field_kaltura_allowed_values($element) {
  * as an example for custom modules that might do things
  * differently.
  */
-function field_kaltura_widget_info() {
-  return array(
-    'field_kaltura_textfield' => array(
-      'label' => t('Kaltura Media'),
-      'field types' => array('Kaltura_Media'),
-      'multiple values' => CONTENT_HANDLE_CORE,
-      'callbacks' => array(
-        'default value' => CONTENT_CALLBACK_DEFAULT,
-      ),
-    ),
-    'field_kaltura_remix_textfield' => array(
-      'label' => t('Kaltura Media Remix'),
-      'field types' => array('Kaltura_Media_Remix'),
-      'multiple values' => CONTENT_HANDLE_CORE,
-      'callbacks' => array(
-        'default value' => CONTENT_CALLBACK_DEFAULT,
-      ),
-    ),
-  );
-}
+
+/*
+ *function field_kaltura_widget_info() {
+ *  return array(
+ *    'field_kaltura_textfield' => array(
+ *      'label' => t('Kaltura Media'),
+ *      'field types' => array('Kaltura_Media'),
+ *      'multiple values' => CONTENT_HANDLE_CORE,
+ *      'callbacks' => array(
+ *        'default value' => CONTENT_CALLBACK_DEFAULT,
+ *      ),
+ *    ),
+ *    'field_kaltura_remix_textfield' => array(
+ *      'label' => t('Kaltura Media Remix'),
+ *      'field types' => array('Kaltura_Media_Remix'),
+ *      'multiple values' => CONTENT_HANDLE_CORE,
+ *      'callbacks' => array(
+ *        'default value' => CONTENT_CALLBACK_DEFAULT,
+ *      ),
+ *    ),
+ *  );
+ *}
+ */
 
 /**
  * Implementation of FAPI hook_elements().
@@ -588,80 +669,88 @@ function field_kaltura_widget_info() {
  * Autocomplete_path is not used by field_kaltura_widget but other widgets can use it
  * (see nodereference and userreference).
  */
-function field_kaltura_elements() {
-  return array(
-    'field_kaltura_textfield' => array(
-      '#input' => TRUE,
-      '#columns' => array('value'), '#delta' => 0,
-      '#process' => array('field_kaltura_textfield_process'),
-      '#autocomplete_path' => FALSE,
-    ),
-    'field_kaltura_remix_textfield' => array(
-      '#input' => TRUE,
-      '#columns' => array('value'), '#delta' => 0,
-      '#process' => array('field_kaltura_remix_textfield_process'),
-      '#autocomplete_path' => FALSE,
-    ),
-  );
-}
+/*
+ *function field_kaltura_elements() {
+ *  return array(
+ *    'field_kaltura_textfield' => array(
+ *      '#input' => TRUE,
+ *      '#columns' => array('value'), '#delta' => 0,
+ *      '#process' => array('field_kaltura_textfield_process'),
+ *      '#autocomplete_path' => FALSE,
+ *    ),
+ *    'field_kaltura_remix_textfield' => array(
+ *      '#input' => TRUE,
+ *      '#columns' => array('value'), '#delta' => 0,
+ *      '#process' => array('field_kaltura_remix_textfield_process'),
+ *      '#autocomplete_path' => FALSE,
+ *    ),
+ *  );
+ *}
+ */
 
 
 
 /**
  * Implementation of hook_widget_settings().
  */
-function field_kaltura_widget_settings($op, $widget) {
-  switch ($op) {
-    case 'form':
-      $form = array();
-      $rows = (isset($widget['rows']) && is_numeric($widget['rows'])) ? $widget['rows'] : 1;
-      $size = (isset($widget['size']) && is_numeric($widget['size'])) ? $widget['size'] : 60;
-      //if ($widget['type'] == 'field_kaltura_textfield' ) {
-        $form['rows'] = array('#type' => 'hidden', '#value' => $rows);
-        $form['size'] = array(
-          '#type' => 'hidden',
-          '#title' => t('Size of textfield'),
-          '#default_value' => $size,
-          '#element_validate' => array('_field_kaltura_widget_settings_size_validate'),
-          '#required' => TRUE,
-        );
-      /*}
-      else {
-        $form['rows'] = array(
-          '#type' => 'textfield',
-          '#title' => t('Rows'),
-          '#default_value' => $rows,
-          '#element_validate' => array('_field_kaltura_widget_settings_row_validate'),
-          '#required' => TRUE,
-        );
-        $form['size'] = array('#type' => 'hidden', '#value' => $size);
-      }*/
-      return $form;
-
-    case 'save':
-      return array('rows', 'size');
-  }
-}
+/*
+ *function field_kaltura_widget_settings($op, $widget) {
+ *  switch ($op) {
+ *    case 'form':
+ *      $form = array();
+ *      $rows = (isset($widget['rows']) && is_numeric($widget['rows'])) ? $widget['rows'] : 1;
+ *      $size = (isset($widget['size']) && is_numeric($widget['size'])) ? $widget['size'] : 60;
+ *      //if ($widget['type'] == 'field_kaltura_textfield' ) {
+ *        $form['rows'] = array('#type' => 'hidden', '#value' => $rows);
+ *        $form['size'] = array(
+ *          '#type' => 'hidden',
+ *          '#title' => t('Size of textfield'),
+ *          '#default_value' => $size,
+ *          '#element_validate' => array('_field_kaltura_widget_settings_size_validate'),
+ *          '#required' => TRUE,
+ *        );
+ *      /*}
+ *      else {
+ *        $form['rows'] = array(
+ *          '#type' => 'textfield',
+ *          '#title' => t('Rows'),
+ *          '#default_value' => $rows,
+ *          '#element_validate' => array('_field_kaltura_widget_settings_row_validate'),
+ *          '#required' => TRUE,
+ *        );
+ *        $form['size'] = array('#type' => 'hidden', '#value' => $size);
+ *      }
+ *      return $form;
+ *
+ *    case 'save':
+ *      return array('rows', 'size');
+ *  }
+ *}
+ */
 
 /*
  * helper function to validate settings form input
  */
-function _field_kaltura_widget_settings_row_validate($element, &$form_state) {
-  $value = $form_state['values']['rows'];
-  if (!is_numeric($value) || intval($value) != $value || $value <= 0) {
-    form_error($element, t('"Rows" must be a positive integer.'));
-  }
-}
+/*
+ *function _field_kaltura_widget_settings_row_validate($element, &$form_state) {
+ *  $value = $form_state['values']['rows'];
+ *  if (!is_numeric($value) || intval($value) != $value || $value <= 0) {
+ *    form_error($element, t('"Rows" must be a positive integer.'));
+ *  }
+ *}
+ */
 
 /*
  * helper function to validate settings form input
  */
-function _field_kaltura_widget_settings_size_validate($element, &$form_state) {
-  $value = $form_state['values']['size'];
-  if (!is_numeric($value) || intval($value) != $value || $value <= 0) {
-    form_error($element, t('"Size" must be a positive integer.'));
-  }
-}
+/*
+ *function _field_kaltura_widget_settings_size_validate($element, &$form_state) {
+ *  $value = $form_state['values']['size'];
+ *  if (!is_numeric($value) || intval($value) != $value || $value <= 0) {
+ *    form_error($element, t('"Size" must be a positive integer.'));
+ *  }
+ *}
+ */
 
 /**
  * Implementation of hook_widget().
@@ -694,13 +783,15 @@ function _field_kaltura_widget_settings_size_validate($element, &$form_state) {
  * @return
  *   the form item for a single element for this field
  */
-function field_kaltura_widget(&$form, &$form_state, $field, $items, $delta = 0) {
-  $element = array(
-    '#type' => $field['widget']['type'],
-    '#default_value' => isset($items[$delta]) ? $items[$delta] : '',
-  );
-  return $element;
-}
+/*
+ *function field_kaltura_widget(&$form, &$form_state, $field, $items, $delta = 0) {
+ *  $element = array(
+ *    '#type' => $field['widget']['type'],
+ *    '#default_value' => isset($items[$delta]) ? $items[$delta] : '',
+ *  );
+ *  return $element;
+ *}
+ */
 
 /**
  * Process an individual element.
@@ -710,7 +801,9 @@ function field_kaltura_widget(&$form, &$form_state, $field, $items, $delta = 0) 
  *
  * The $fields array is in $form['#field_info'][$element['#field_name']].
  */
-function field_kaltura_textfield_process($element, $edit, $form_state, $form) {
+//function field_kaltura_textfield_process($element, $edit, $form_state, $form) {
+function field_kaltura_widget($element, $edit, $form_state, $form) {
+  debug($element);
   global $_kaltura_thumbnail_base_url;
   $field = $form['#field_info'][$element['#field_name']];
   $field_key = $element['#columns'][0];
@@ -718,7 +811,7 @@ function field_kaltura_textfield_process($element, $edit, $form_state, $form) {
   $custom_name = 'edit-'. str_replace('_', '-', $element['#field_name']) .'-'. $delta .'-'. $field_key;
   $element['data'] = array('#tree' => 'true');
   $ui_conf = !empty($form['#field_info'][$element['#field_name']]['entry_cw']) ?
-							$form['#field_info'][$element['#field_name']]['entry_cw'] : 0;
+	$form['#field_info'][$element['#field_name']]['entry_cw'] : 0;
 
   if ($ui_conf == 1)
   {

@@ -887,8 +887,8 @@ function kaltura_format_cw_vars($vars = array()) {
  * helper function to get a node id for a given entryId/kshowId
  */
 function kaltura_get_node_for_mix($entry_id) {
-  $get_q = 'SELECT nid FROM {node_kaltura} WHERE kaltura_entryId = \'%s\'';
-  $result = db_query($get_q, $entry_id);
+  $get_q = 'SELECT nid FROM {node_kaltura} WHERE kaltura_entryId = :entryid';
+  $result = db_query($get_q, array('entryid' => $entry_id));
   $obj = db_fetch_object($result);
   return $obj->nid;
 }
@@ -897,8 +897,8 @@ function kaltura_get_node_for_mix($entry_id) {
  *
  */
 function katlura_get_metadata_for_mix($entry_id) {
-  $get_q = 'SELECT vid, nid, kaltura_thumbnail_url FROM {node_kaltura} WHERE kaltura_entryId = \'%s\'';
-  $result = db_query($get_q, $entry_id);
+  $get_q = 'SELECT vid, nid, kaltura_thumbnail_url FROM {node_kaltura} WHERE kaltura_entryId = :entryid';
+  $result = db_query($get_q, array('entryid' => $entry_id));
   $obj = db_fetch_object($result);
   return $obj;
 }

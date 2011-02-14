@@ -45,7 +45,6 @@ function field_kaltura_field_schema($field) {
       'type' => 'text',
       'size' => 'tiny',
       'not null' => TRUE,
-      'default' => 'HTTP',
     ),
     'stretch' => array (
       'type' => 'int',
