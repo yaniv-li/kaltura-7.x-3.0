@@ -650,18 +650,18 @@ function theme_kaltura_contribution_wizard_field($theme_params, $field_id, $no_c
     var goto_url = "'. $goto_url .'";
     var node_url = "'. (($theme_params->mix_id)? url("node/". $theme_params->mix_id): '') .'";
     function onContributionWizardAfterAddEntry(obj) {
-      str = "";
-      for(i=0;i<obj.length;i++) {
-        str += obj[i]["entryId"] + ",";
-      }
+      console.dir(obj);
+      str = obj[0]["entryId"];
       '.
-      (($no_collect_entries === TRUE)? '': 'if (entry_list == "-1") entry_list = str; else entry_list += str;') .'
+        (($no_collect_entries === TRUE)? '': 'if (entry_list == "-1") entry_list = str; else entry_list += str;') .'
+         jQuery("#entryid input", window.parent.document).val(str);
     }
 
     function onContributionWizardClose(modified) {
       if (modified == "0")
         setTimeout("window.top.kalturaCloseModalBox();", 0);
       else
+        setTimeout("window.top.kalturaCloseModalBox();", 0);
         window.location.href = "'. url("kaltura/insert_widget/") .'" + entry_list + "/'. $field_id .'";
     }
   ';

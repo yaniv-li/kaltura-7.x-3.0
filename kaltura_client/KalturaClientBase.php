@@ -1,5 +1,5 @@
 <?php
-class KalturaClientBase 
+class KalturaClientBase
 {
 	const KALTURA_API_VERSION = "3.0";
 	const KALTURA_SERVICE_FORMAT_JSON = 1;
@@ -41,7 +41,7 @@ class KalturaClientBase
       if ($config != null)
       {
 	      $this->config = $config;
-  	    
+  	
 	      $logger = $this->config->getLogger();
 		    if ($logger)
 		    {
@@ -71,7 +71,7 @@ class KalturaClientBase
 	{
 		if (count($this->callsQueue) == 0)
 			return null;
-			 
+			
 		$startTime = microtime(true);
 				
 		$params = array();
@@ -105,7 +105,7 @@ class KalturaClientBase
 		
 		// reset
 		$this->callsQueue = array();
-		$this->isMultiRequest = false; 
+		$this->isMultiRequest = false;
 		
 		$signature = $this->signature($params);
 		$this->addParam($params, "kalsig", $signature);
@@ -116,7 +116,7 @@ class KalturaClientBase
 		{
 			throw new Exception($error);
 		}
-		else 
+		else
 		{
 			$this->log("result (serialized): " . $postResult);
 			
@@ -124,7 +124,7 @@ class KalturaClientBase
 			{
 				$result = @unserialize($postResult);
 
-				if ($result === false && serialize(false) !== $postResult) 
+				if ($result === false && serialize(false) !== $postResult)
 				{
 					throw new Exception("failed to serialize server result\n$postResult");
 				}
@@ -213,7 +213,7 @@ class KalturaClientBase
 	}
 
 	/**
-	 * HTTP stream context request 
+	 * HTTP stream context request
 	 *
 	 * @param string $url
 	 * @param array $params
@@ -403,7 +403,7 @@ class KalturaServiceActionCall
 
 		// flatten sub arrays (the objects)
 		$newParams = array();
-		foreach($params as $key => $val) 
+		foreach($params as $key => $val)
 		{
 			if (is_array($val))
 			{
@@ -441,7 +441,7 @@ class KalturaServiceActionCall
 }
 
 /**
- * Abstract base class for all client services 
+ * Abstract base class for all client services
  *
  */
 abstract class KalturaServiceBase
@@ -463,7 +463,7 @@ abstract class KalturaServiceBase
 }
 
 /**
- * Abstract base class for all client objects 
+ * Abstract base class for all client objects
  *
  */
 abstract class KalturaObjectBase
@@ -488,11 +488,11 @@ abstract class KalturaObjectBase
 	}
 }
 
-class KalturaException extends Exception 
+class KalturaException extends Exception
 {
 	protected $code;
 	
-    public function __construct($message, $code) 
+    public function __construct($message, $code)
     {
     	$this->code = $code;
 		parent::__construct($message);
@@ -516,7 +516,7 @@ class KalturaConfiguration
 	{
 	    if (!is_numeric($partnerId))
 	        throw new Exception("Invalid partner id");
-	        
+	
 	    $this->partnerId = $partnerId;
 	}
 	
@@ -545,9 +545,9 @@ class KalturaConfiguration
  * Implement to get Kaltura Client logs
  *
  */
-interface IKalturaLogger 
+interface IKalturaLogger
 {
-	function log($msg); 
+	function log($msg);
 }
 
 

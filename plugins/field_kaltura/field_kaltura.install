@@ -11,62 +11,75 @@
 * Implements hook_field_schema().
 */
 function field_kaltura_field_schema($field) {
+  //dsm($field);
   $columns = array(
     //'allowed_values',
     //'allowed_values_php',
-    'entry_id' => array (
+    'entryid' => array (
       'description' => 'Kaltura entry id',
       'type' => 'varchar',
-      'length' => 10,
+      'length' => 20,
       'default' => '',
       'not null' => TRUE,
     ),
-    'thumbsize_height' => array (
-      'type' => 'int',
-      'size' => 'tiny',
-      'not null' => FALSE,
-    ),
-    'thumbsize_width' => array (
-      'type' => 'int',
-      'size' => 'tiny',
-      'not null' => FALSE,
-    ),
-    'player_height' => array (
-      'type' => 'int',
-      'size' => 'tiny',
-      'not null' => FALSE,
-    ),
-    'player_width' => array (
-      'type' => 'int',
-      'size' => 'tiny',
-      'not null' => FALSE,
-    ),
-    'delivery' => array (
-      'type' => 'text',
-      'size' => 'tiny',
-      'not null' => TRUE,
-    ),
-    'stretch' => array (
-      'type' => 'int',
-      'size' => 'tiny',
-      'not null' => FALSE,
-      'default' => 0,
-
-    ),
-    'rotate' => array (
-      'type' => 'int',
-      'size' => 'tiny',
-      'not null' => FALSE,
-      'default' => 0,
-    ),
-    /*//'entry_widget',*/
-    /*'entry_cw' => array (*/
-      /*//uiconf*/
-    /*),*/
-    /*'custom_cw' => array (*/
-      /*//uiconf*/
-    /*)*/
-    /*//'dispaly_metadata'*/
+/*
+ *    'thumbsize_height' => array (
+ *      'type' => 'int',
+ *      'size' => 'tiny',
+ *      'not null' => FALSE,
+ *    ),
+ *    'thumbsize_width' => array (
+ *      'type' => 'int',
+ *      'size' => 'tiny',
+ *      'not null' => FALSE,
+ *    ),
+ *    'player_height' => array (
+ *      'type' => 'int',
+ *      'size' => 'tiny',
+ *      'not null' => FALSE,
+ *    ),
+ *    'player_width' => array (
+ *      'type' => 'int',
+ *      'size' => 'tiny',
+ *      'not null' => FALSE,
+ *    ),
+ *    'delivery' => array (
+ *      'type' => 'text',
+ *      'size' => 'tiny',
+ *      'not null' => TRUE,
+ *    ),
+ *    'stretch' => array (
+ *      'type' => 'int',
+ *      'size' => 'tiny',
+ *      'not null' => FALSE,
+ *      'default' => 0,
+ *
+ *    ),
+ *    'rotate' => array (
+ *      'type' => 'int',
+ *      'size' => 'tiny',
+ *      'not null' => FALSE,
+ *      'default' => 0,
+ *    ),
+ *    'entry_widget' => array (
+ *      'type' => 'varchar',
+ *      'length' => 20,
+ *      'default' => '',
+ *      'not null' => TRUE,
+ *    ),
+ *    'custom_cw' => array (
+ *      'type' => 'varchar',
+ *      'length' => 20,
+ *      'default' => '',
+ *      'not null' => TRUE,
+ *    ),
+ *    'dispaly_metadata' => array (
+ *      'type' => 'int',
+ *      'size' => 'tiny',
+ *      'not null' => FALSE,
+ *      'default' => 0,
+ *    ),
+ */
   );
   return array (
     'columns' => $columns,
