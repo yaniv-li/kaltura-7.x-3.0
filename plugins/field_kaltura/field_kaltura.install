@@ -22,6 +22,10 @@ function field_kaltura_field_schema($field) {
       'default' => '',
       'not null' => TRUE,
     ),
+    'mediatype' => array (
+      'type' => 'int',
+      'size' => 'tiny',
+    ),
 /*
  *    'thumbsize_height' => array (
  *      'type' => 'int',

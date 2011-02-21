@@ -652,9 +652,11 @@ function theme_kaltura_contribution_wizard_field($theme_params, $field_id, $no_c
     function onContributionWizardAfterAddEntry(obj) {
       console.dir(obj);
       str = obj[0]["entryId"];
+      type = obj[0]["mediaType"];
       '.
         (($no_collect_entries === TRUE)? '': 'if (entry_list == "-1") entry_list = str; else entry_list += str;') .'
          jQuery("#entryid input", window.parent.document).val(str);
+         jQuery("#media-type input", window.parent.document).val(type);
     }
 
     function onContributionWizardClose(modified) {

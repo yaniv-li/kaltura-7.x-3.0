@@ -40,6 +40,7 @@ function field_kaltura_field_info() {
  */
 
 function field_kaltura_field_settings_form($field, $instance) {
+  dsm($instance);
       $form = array();
  //specific field setting can come here (taxonomy integration/player selection/etc...)
       $form['thumbsize'] = array(
@@ -98,6 +99,16 @@ function field_kaltura_field_settings_form($field, $instance) {
         '#title' => t('Dispaly Metadata'),
         '#default_value' => !empty($field['dispaly_metadata']) ? $field['dispaly_metadata'] : '0',
       );
+      $form['kaltura_entry_video_display']['rotate'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Preview video in thumbnail'),
+        '#default_value' => !empty($field['rotate']) ? $field['rotate'] : '0',
+      );
+      $form['kaltura_entry_video_display']['stretch'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Stretch video in thumbnail'),
+        '#default_value' => !empty($field['stretch']) ? $field['stretch'] : '0',
+      );
 
       $form['custom_cw'] = array(
         '#type' => 'textfield',
@@ -110,6 +121,19 @@ function field_kaltura_field_settings_form($field, $instance) {
         '#options' => drupal_map_assoc(array('HTTP', 'RTMP')),
         '#default_value' => 'HTTP',
       );
+
+      switch ($instance['widget']['type']) {
+        case 'field_kaltura_image':
+          unset($form['custom_cw'], $form['delivery'], $form['kaltura_entry_video_display']['rotate'], $form['kaltura_entry_video_display']['entry_widget']);
+          $form['kaltura_entry_video_display']['player_height']['#title'] = t('Image hight');
+          $form['kaltura_entry_video_display']['player_width']['#title'] = t('Image width');
+          break;
+
+        case 'field_kaltura_audio':
+          unset($form['kaltura_entry_video_display']['rotate'], $form['thumbsize']);
+
+          break;
+      }
 
 
     return $form;
@@ -149,28 +173,27 @@ function field_kaltura_field_widget_form(&$form, &$form_state, $field, $instance
   $element += array(
     '#delta' => $delta,
   );
-  $element['entryid'] = array();
+  //$element['entryid'] = array();
   switch ($instance['widget']['type']) {
   case 'field_kaltura_video':
     $instance['uiconf'] = ($custom_cw) ? $custom_cw : KalturaSettings_CW_UICONF_ID_VIDEO;
     $widget = kaltura_widget_hendler($instance);
-    $element['entryid'] += $widget;
+    $element += $widget;
     break;
   case 'field_kaltura_audio':
     $instance['uiconf'] = ($custom_cw) ? $custom_cw : KalturaSettings_CW_UICONF_ID_AUDIO;
     $widget = kaltura_widget_hendler($instance);
-    $element['entryid'] += $widget;
+    $element += $widget;
     break;
   case 'field_kaltura_image':
     $instance['uiconf'] = ($custom_cw) ? $custom_cw : KalturaSettings_CW_UICONF_ID_IMAGE;
     $widget = kaltura_widget_hendler($instance);
-    $element['entryid'] += $widget;
-    //dsm($element);
+    $element += $widget;
     break;
   case 'field_kaltura_all_media':
     $instance['uiconf'] = ($custom_cw) ? $custom_cw : KalturaSettings_CW_UICONF_ID;
     $widget = kaltura_widget_hendler($instance);
-    $element['entryid'] = $widget;
+    $element += $widget;
     break;
    }
 
@@ -195,11 +218,17 @@ function kaltura_widget_hendler ($instance) {
    *  '#value' => '<div id="'. $custom_name .'_thumbs_div">'. $field_thumbs .'</div>',
    *);
    */
-  $widget['val'] = array(
+  $widget['entryid'] = array(
     '#prefix' => '<div id="entryid">',
     '#suffix' => '</div>',
     '#type' => 'hidden',
     '#default_value' => '5555',
+  );
+  $widget['mediatype'] = array(
+    '#prefix' => '<div id="media-type">',
+    '#suffix' => '</div>',
+    '#type' => 'hidden',
+    '#default_value' => '',
   );
   $widget['button'] = array(
     '#type' => 'item',
@@ -333,8 +362,8 @@ function field_kaltura_field_formatter_info() {
 function field_kaltura_field_formatter_settings_form ($field, $instance, $view_mode, $form, &$form_state) {
   $display = $instance['display'][$view_mode];
   $settings = $display['settings'];
-  dsm($settings);
-  dsm($field);
+  /*dsm($settings);*/
+  /*dsm($field);*/
   $element = array();
  //specific field setting can come here (taxonomy integration/player selection/etc...)
       $element['thumbsize'] = array(
@@ -418,18 +447,27 @@ function field_kaltura_field_formatter_view($entity_type, $entity, $field, $inst
   $element = array();
   $settings = $field['settings']; // should be dispaly['settings'] when I figure it out
   $item = $items[0]['entryid'];
+  $type = $items[0]['mediatype'];
+  $query = db_select('node_kaltura', 'k')
+    ->fields('k')
+    ->condition('kaltura_entryid', $item, '=')
+    ->execute()
+    ->fetchAssoc();
+  dsm($query);
+  $metadata = array();
+  $metadata['views'] = $query['kaltura_views'];
+  $metadata['plays'] = $query['kaltura_plays'];
+  $metadata['votes'] = $query['kaltura_votes'];
+  $metadata['rank'] = $query['kaltura_rank'];
+  $metadata['total_rank'] = $query['kaltura_total_rank'];
   $path = $entity->url['path']; //could be aproblem if this is not a node
   $user_id = $entity->uid;
-  dsm($entity);
+  dsm($items);
   dsm($settings);
   switch ($display['type']) {
   case 'field_kaltura_default':
-    /*
-     *dsm($items);
-     *dsm($instance);
-     *dsm($entity);
-     */
-    $a = build_kaltura_embed($items, 2, $settings, $path, $user_id);
+    $a = build_kaltura_embed($item, $type, $settings, $path, $user_id);
+    $element[0]['#markup'] = '<div class="kaltura">' . $a . '</div>';
     dsm($a);
     break;
 
@@ -440,7 +478,14 @@ function field_kaltura_field_formatter_view($entity_type, $entity, $field, $inst
   return $element;
 }
 
-
+function field_kaltura_field_presave($entity_type, $entity, $field, $instance, $langcode, &$items) {
+  //dsm($items);
+  foreach ($items as $item) {
+    $rec['kaltura_entryid'] = $item['entryid'];
+    $rec['kaltura_media_type'] = $item['mediatype'];
+    drupal_write_record('node_kaltura', $rec);
+  }
+}
 
 /****** dispalys should move to a different file and implemented diffrently *******/
 
@@ -479,7 +524,7 @@ function kaltura_get_default_display($item, $type, $settings) {
 }
 
 
-function build_kaltura_embed($item,  $type, $settings, $path, $uid) {
+function build_kaltura_embed($item, $type, $settings, $path, $uid) {
 if($type == 1 || $type == 5) {
   /*
    *if ($type == 5) {
@@ -492,8 +537,8 @@ if($type == 1 || $type == 5) {
    *}
    */
  	$width = $settings['kaltura_entry_video_display']['player_width'];
- 	$height =$settings['kaltura_entry_video_display']['player_height'];
- 	$uiconf =$settings['kaltura_entry_video_display']['entry_widget'];
+ 	$height = $settings['kaltura_entry_video_display']['player_height'];
+ 	$uiconf = reset($settings['kaltura_entry_video_display']['entry_widget']);
   $kid = $item;
   $partnerId = variable_get('kaltura_partner_id', 0);
   $kaltura_server = (variable_get('kaltura_server_url', ''))? variable_get('kaltura_server_url', ''): KalturaSettings_SERVER_URL;
@@ -501,27 +546,57 @@ if($type == 1 || $type == 5) {
   $src = $swf_url . '/entry_id/' . $kid . '/uiconf_id/' . $uiconf;
   global $base_url;
   $orig_url = urlencode($base_url . '/' . $path);
-  $embed = '<embed width="' . $width . '"
+  /*
+   *$embed = '<embed width="' . $width . '"
+   *  height="' . $height . '"
+   *  allownetworking="all"
+   *  allowfullscreen="TRUE"
+   *  allowscriptaccess="always"
+   *  flashvars="uid=' . $uid . '&amp;externalInterfaceDisabled=false&amp;layoutId=fullLarge&amp;    pd_original_url=' . $orig_url . '"
+   *  wmode="opaque"
+   *  quality="high"
+   *  bgcolor="#000000"
+   *  name="kaltura_player_ ' . $kid . '"
+   *  id="kaltura_player_ ' . $kid . '"
+   *  style=""
+   *  src="' . $src .'"
+   *  type="application/x-shockwave-flash">';
+   */
+
+  $embed = '<object
+    id="kaltura_player"
+    name="kaltura_player"
+    type="application/x-shockwave-flash"
+    allowFullScreen="true"
+    allowNetworking="all"
+    allowScriptAccess="always"
     height="' . $height . '"
-    allownetworking="all"
-    allowfullscreen="TRUE"
-    allowscriptaccess="always"
-    flashvars="uid=' . $uid . '&amp;externalInterfaceDisabled=false&amp;layoutId=fullLarge&amp;    pd_original_url=' . $orig_url . '"
-    wmode="opaque"
-    quality="high"
-    bgcolor="#000000"
-    name="kaltura_player_ ' . $kid . '"
-    id="kaltura_player_ ' . $kid . '"
-    style=""
-    src="' . $src .'"
-    type="application/x-shockwave-flash">';
+    width="' . $width . '"
+    rel="media:video"
+    resource="' . $src . '"
+    data="' . $src . '">
+    <param name="allowFullScreen" value="true" />
+    <param name="allowNetworking" value="all" />
+    <param name="allowScriptAccess" value="always" />
+    <param name="bgcolor" value="#000000" />
+    <param name="flashVars" value="streamerType=rtmp&streamerUrl=rtmp://rtmpakmi.kaltura.com/ondemand&rtmpFlavors=1&&" />
+    <param name="movie" value="' . $src . '" />
+    </object>';
+
+
   }
   else{
     $vars['width'] = variable_get('kaltura_image_entry_width', '410');
     $vars['height'] = variable_get('kaltura_image_entry_height', '364');
-    $vars['path'] = 'kaltura_thumbnail_url' .'/width/'. $width .'/height/'. $height .'/type/1/quality/100';
+    $vars['path'] = build_thumb_url() . $kid . '/width/'. $width .'/height/'. $height .'/type/1/quality/100';
     $embed = theme_image($$vars);
   }
 return $embed;
 
+}
+
+function build_thumb_url() {
+  $partnerId = variable_get('kaltura_partner_id', 0);
+  $url = CDN_HOST . 'p/' . $partnerId . 'thumbnail/entry_id/';
+  return $url;
 }
