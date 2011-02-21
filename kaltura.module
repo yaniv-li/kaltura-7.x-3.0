@@ -469,13 +469,21 @@ function kaltura_cron() {
   $now = time();
   $diff = $now - $lastcron;
   $diffHours = round($diff / 60 / 60);
-  if ($diffHours >= variable_get('kaltura_update_frequency', 0) + 1) {
-    try {
-      $get_entries = 'SELECT kaltura_entryId FROM {node_kaltura} node_kaltura LEFT JOIN {node} node ON node.nid = node_kaltura.nid WHERE node.status = 1';
-      $entries = db_query($get_entries);
-        while ($entry = db_fetch_object($entries)) {
-        $all_entries[] = $entry->kaltura_entryId;
-      }
+//  if ($diffHours >= variable_get('kaltura_update_frequency', 0) + 1) {
+  try {
+
+  $all_entries = db_select('node_kaltura', 'k')
+    ->fields('k', array('kaltura_entryid'))
+    ->execute()
+    ->fetchCol();
+
+      /*
+       *$get_entries = 'SELECT kaltura_entryId FROM {node_kaltura} node_kaltura LEFT JOIN {node} node ON node.nid = node_kaltura.nid WHERE node.status = 1';
+       *$entries = db_query($get_entries);
+       *  while ($entry = db_fetch_object($entries)) {
+       *  $all_entries[] = $entry->kaltura_entryId;
+       *}
+       */
       if (is_array($all_entries) && count($all_entries)) {
         $my_entries = implode(',', $all_entries);
         $result = kaltura_get_entries($my_entries, count($all_entries), TRUE);
@@ -486,11 +494,33 @@ function kaltura_cron() {
       // if we got a good result, we update the entry data in the DB
       if ($result !== FALSE) {
         foreach ($result->objects as $resultObject) {
-          if ($resultObject->duration) {
-            $duration = $entry['duration'];
-          }
-          $update_entry = 'UPDATE {node_kaltura} SET kstatus = %d, kaltura_views = %d, kaltura_plays = %d, kaltura_rank = %d, kaltura_total_rank = %d, kaltura_duration = %d, kaltura_votes = %d, kaltura_thumbnail_url = \'%s\' WHERE kaltura_entryId = \'%s\'';
-          $updated = db_query($update_entry, $resultObject->status, $resultObject->views, $resultObject->plays, $resultObject->rank, $resultObject->totalRank, $duration, $resultObject->votes, $resultObject->thumbnailUrl, $resultObject->id);
+          /*
+           *if ($resultObject->duration) {
+           *  $duration = $entry['duration'];
+           *}
+           */
+          $ent[kaltura_entryid] = $resultObject->id;
+          $ent['kaltura_tags'] = $resultObject->tags;
+          $ent['kaltura_admin_tags'] = $resultObject->adminTags;
+          $ent['kstatus'] = $resultObject->status;
+          $ent['kaltura_media_type'] = $resultObject->mediaType;
+          $ent['kaltura_duration']= $resultObject->duration;
+          $ent['kaltura_thumbnail_url'] = $resultObject->thumbnailUrl;
+          $ent['kaltura_partner_data'] = $resultObject->partnerData;
+          $ent['kaltura_source'] = $resultObject->sourceType;
+          $ent['kaltura_width'] = $resultObject->width;
+          $ent['kaltura_height'] = $resultObject->height;
+          $ent['kaltura_download_url'] = $resultObject->downloadUrl;
+          $ent['kaltura_views'] = $resultObject->views;
+          $ent['kaltura_plays'] = $resultObject->plays;
+          $ent['kaltura_votes'] = $resultObject->votes;
+          $ent['kaltura_rank'] = $resultObject->rank;
+          $ent['kaltura_total_rank'] = $resultObject->totalRank;
+          drupal_write_record('node_kaltura', $ent, 'kaltura_entryid');
+          /*
+           *$update_entry = 'UPDATE {node_kaltura} SET kstatus = %d, kaltura_views = %d, kaltura_plays = %d, kaltura_rank = %d, kaltura_total_rank = %d, kaltura_duration = %d, kaltura_votes = %d, kaltura_thumbnail_url = \'%s\' WHERE kaltura_entryId = \'%s\'';
+           *$updated = db_query($update_entry, $resultObject->status, $resultObject->views, $resultObject->plays, $resultObject->rank, $resultObject->totalRank, $duration, $resultObject->votes, $resultObject->thumbnailUrl, $resultObject->id);
+           */
         }
       }
       //if the is a sucsesfull run write time stamp
@@ -499,7 +529,7 @@ function kaltura_cron() {
     }
     catch (Exception $ex) {
     }
-  }
+  //}
 }
 
 /*

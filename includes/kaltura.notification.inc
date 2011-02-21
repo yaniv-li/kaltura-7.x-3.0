@@ -30,6 +30,7 @@ function kaltura_notification_handler() {
   watchdog('kaltura NH', print_r($params, TRUE));
   unset($params['q']);
   $noti = new KalturaNotificationClient($params, $admin_secret);
+  dd($noti);
   if ($noti->valid_signature === NULL) {
     watchdog('kaltura', 'notification params empty');
     return FALSE;
@@ -81,7 +82,7 @@ function kaltura_notification_received($notification_id) {
 function kaltura_forward_notification($noti) {
   watchdog('kaltura notification handler', print_r($noti, TRUE));
   switch ($noti['notification_type']) {
-    case 'entry_add': 
+    case 'entry_add':
 	  if ($noti['media_type'] == 6)
 	  {
 		kaltura_notify_node_entry_add('mix', $noti);
@@ -179,14 +180,14 @@ function kaltura_notify_node_entry_add($type, $notification_data) {
   $node->promote = 0;
   $node->sticky = 0;
   $node->kstatus = $notification_data['status'];
-  
+
   if ($partner_data['entry_as_comment'] == 'yes') {
     $node->kaltura_video_comment = 1;
   }
   else {
     $node->kaltura_video_comment = 0;
   }
-  
+
   kaltura_push_extra_data($node, $notification_data);
   $node->kaltura_entry_data = serialize(array($notification_data));
   $node->kaltura_tags = $notification_data['tags'];

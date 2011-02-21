@@ -169,6 +169,21 @@ function field_kaltura_field_widget_info() {
 }
 
 function field_kaltura_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
+  $entry_val = isset($items[$delta]['entryid']) ? $items[$delta]['entryid'] : '';
+  $mediat_val = isset($items[$delta]['mediatype']) ? $items[$delta]['mediatype'] : '';
+  if (!empty($entry_val) && !empty($mediat_val)) {
+    $query = db_select('node_kaltura', 'k')
+      ->fields('k', array('kaltura_thumbnail_url'))
+      ->condition('kaltura_entryid', $entry_val, '=')
+      ->execute()
+      ->fetchCol();
+    $turl= $query[0];
+    $opts['path'] = $turl;
+
+    $element['thumb'] = array(
+      '#markup' => '<div class="tumb">'. theme('image', $opts) . '</div>',
+    );
+  }
   $custom_cw  = $form_state['field'][$element['#field_name']][$element['#language']]['field']['settings']['custom_cw'];
   $element += array(
     '#delta' => $delta,
@@ -177,22 +192,22 @@ function field_kaltura_field_widget_form(&$form, &$form_state, $field, $instance
   switch ($instance['widget']['type']) {
   case 'field_kaltura_video':
     $instance['uiconf'] = ($custom_cw) ? $custom_cw : KalturaSettings_CW_UICONF_ID_VIDEO;
-    $widget = kaltura_widget_hendler($instance);
+    $widget = kaltura_widget_hendler($instance, $entry_val, $mediat_val);
     $element += $widget;
     break;
   case 'field_kaltura_audio':
     $instance['uiconf'] = ($custom_cw) ? $custom_cw : KalturaSettings_CW_UICONF_ID_AUDIO;
-    $widget = kaltura_widget_hendler($instance);
+    $widget = kaltura_widget_hendler($instance, $entry_val, $mediat_val);
     $element += $widget;
     break;
   case 'field_kaltura_image':
     $instance['uiconf'] = ($custom_cw) ? $custom_cw : KalturaSettings_CW_UICONF_ID_IMAGE;
-    $widget = kaltura_widget_hendler($instance);
+    $widget = kaltura_widget_hendler($instance, $entry_val, $mediat_val);
     $element += $widget;
     break;
   case 'field_kaltura_all_media':
     $instance['uiconf'] = ($custom_cw) ? $custom_cw : KalturaSettings_CW_UICONF_ID;
-    $widget = kaltura_widget_hendler($instance);
+    $widget = kaltura_widget_hendler($instance, $entry_val, $mediat_val);
     $element += $widget;
     break;
    }
@@ -200,7 +215,8 @@ function field_kaltura_field_widget_form(&$form, &$form_state, $field, $instance
   return $element;
 }
 
-function kaltura_widget_hendler ($instance) {
+function kaltura_widget_hendler ($instance, $entry, $mediat) {
+  //dsm($instance);
   $cw_vars = kaltura_format_cw_vars(array(
     'kshow_id' => 0,
     'partner_data' => '',
@@ -222,13 +238,13 @@ function kaltura_widget_hendler ($instance) {
     '#prefix' => '<div id="entryid">',
     '#suffix' => '</div>',
     '#type' => 'hidden',
-    '#default_value' => '',
+    '#default_value' => $entry,
   );
   $widget['mediatype'] = array(
     '#prefix' => '<div id="media-type">',
     '#suffix' => '</div>',
     '#type' => 'hidden',
-    '#default_value' => '',
+    '#default_value' => $mediat,
   );
   $widget['button'] = array(
     '#type' => 'item',
@@ -557,7 +573,7 @@ function field_kaltura_field_presave($entity_type, $entity, $field, $instance, $
   foreach ($items as $item) {
     $rec['kaltura_entryid'] = $item['entryid'];
     $rec['kaltura_media_type'] = $item['mediatype'];
-    drupal_write_record('node_kaltura', $rec);
+    drupal_write_record('node_kaltura', $rec, 'kaltura_entryid');
   }
 }
 
